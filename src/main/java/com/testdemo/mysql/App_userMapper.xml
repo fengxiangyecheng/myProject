@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.testdemo.mapper.App_userMapper">
+<!-- 固定列；account_status 已通过补丁落库，统一读取真实字段 -->
+<sql id="Base_Column_Core">
+su.id id,
+su.username username,
+su.password password,
+su.nickname nickname,
+su.sex sex,
+su.phone phone,
+su.h_img h_img,
+su.user_prefs user_prefs
+</sql>
+<select id="getLoginValidation" parameterType="pd" resultType="pd" useCache="false">
+SELECT
+<include refid="Base_Column_Core"/>,
+IFNULL(su.account_status,'1') account_status
+FROM app_user su
+WHERE TRIM(su.username) = TRIM(#{USERNAME})
+  AND su.password = #{PASSWORD}
+LIMIT 1
+</select>
+<select id="countApp_userByUsername" parameterType="pd" resultType="int" useCache="false">
+SELECT COUNT(1) FROM app_user WHERE TRIM(IFNULL(username,'')) = TRIM(#{username})
+</select>
+<select id="countApp_userUsernameOtherThanId" parameterType="pd" resultType="int" useCache="false">
+SELECT COUNT(1) FROM app_user
+WHERE TRIM(IFNULL(username,'')) = TRIM(#{username})
+AND CAST(id AS CHAR) != CAST(#{id} AS CHAR)
+</select>
+<!--在数据不存在的情况下进行添加-->
+<insert id="addApp_user" parameterType="pd">
+insert into app_user (
+username,
+password,
+nickname,
+sex,
+phone,
+h_img
+<if test="user_prefs != null">,user_prefs</if>
+ ) values (
+#{username},
+#{password},
+#{nickname},
+#{sex},
+#{phone},
+#{h_img}
+<if test="user_prefs != null">,#{user_prefs}</if>
+) </insert>
+<!--根据id删除数据-->
+<delete id="deleteApp_userId" parameterType="pd"  >
+DELETE FROM  app_user WHERE id = #{id};
+</delete>
+<!--根据id更新数据-->
+<update id="updateApp_user" parameterType="pd"  >
+UPDATE app_user  <set>
+
+<if test="username != null and username !=''"> username = #{username}, </if>
+<if test="password != null and password !=''"> password = #{password}, </if>
+<if test="nickname != null and nickname !=''"> nickname = #{nickname}, </if>
+<if test="sex != null and sex !=''"> sex = #{sex}, </if>
+<if test="phone != null and phone !=''"> phone = #{phone}, </if>
+<if test="h_img != null and h_img !=''"> h_img = #{h_img}, </if>
+<if test="account_status != null"> account_status = #{account_status}, </if>
+<if test="user_prefs != null"> user_prefs = #{user_prefs}, </if>
+</set>
+ WHERE id = #{id}; </update>
+<update id="updateApp_userAccountStatus" parameterType="pd">
+UPDATE app_user SET account_status = #{account_status} WHERE id = #{id}
+</update>
+<!--获取数据 不分页-->
+<select id="queryApp_userKey" parameterType="pd" resultType="pd" useCache="false">
+SELECT <include refid="Base_Column_Core"/>,
+IFNULL(su.account_status,'1') account_status
+<!--向左关联查询返回对应字段-->
+FROM app_user su
+<!--向左关联查询-->
+where 1 = 1
+ <if test="id != null and id != '' "> and su.id = #{id}  </if>
+ <if test="username != null and username != '' "> and su.username = #{username}  </if>
+ <if test="password != null and password != '' "> and su.password = #{password}  </if>
+ <if test="nickname != null and nickname != '' "> and su.nickname = #{nickname}  </if>
+ <if test="sex != null and sex != '' "> and su.sex = #{sex}  </if>
+ <if test="phone != null and phone != '' "> and su.phone = #{phone}  </if>
+ <if test="h_img != null and h_img != '' "> and su.h_img = #{h_img}  </if>
+ <if test="account_status != null"> and su.account_status = #{account_status}  </if>
+</select>
+<!--获取用户列表数据 分页-->
+<select id="queryPageApp_userKeyList" parameterType="page" resultType="pd" useCache="false">
+SELECT <include refid="Base_Column_Core"/>,
+IFNULL(su.account_status,'1') account_status
+<!--向左关联查询返回对应字段-->
+FROM app_user su
+<!--向左关联查询-->
+where 1 = 1
+ <if test="pd.id != null and pd.id !=''"> and su.id = #{pd.id}  </if>
+ <if test="pd.username != null and pd.username !=''"> and su.username = #{pd.username}  </if>
+ <if test="pd.password != null and pd.password !=''"> and su.password = #{pd.password}  </if>
+ <if test="pd.nickname != null and pd.nickname !=''"> and su.nickname = #{pd.nickname}  </if>
+ <if test="pd.sex != null and pd.sex !=''"> and su.sex = #{pd.sex}  </if>
+ <if test="pd.phone != null and pd.phone !=''"> and su.phone = #{pd.phone}  </if>
+ <if test="pd.h_img != null and pd.h_img !=''"> and su.h_img = #{pd.h_img}  </if>
+ <if test="pd.account_status != null"> and su.account_status = #{pd.account_status}  </if>
+</select>
+</mapper>

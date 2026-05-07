@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
+    <title>个人中心</title>
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="stylesheet" href="../static/css/common.css">
+    <link rel="stylesheet" href="../static/element-ui/lib/theme-chalk/index.css">
+    <script type="text/javascript">
+        var html = document.getElementsByTagName("html")[0];
+        var w = document.documentElement.clientWidth || document.body.clientWidth;
+        html.style.fontSize = w / 1366 + "px";
+    </script>
+    <script src="../static/js/vue.js"></script>
+    <script src="../static/element-ui/lib/index.js"></script>
+    <script src="../static/js/jquery-2.2.3.min.js"></script>
+    <style>
+        body { y-overflow: auto; }
+        .wrap { width: 640px; margin: 20px auto; padding: 20px; border-radius: 10px; background: #ffffff; }
+        .el-table td { padding: 4px 0 !important; }
+    </style>
+</head>
+<body style="background-color:#f1f7fe;">
+<div id="cus_IndexApp" v-cloak>
+    <div class="wrap">
+        <!-- 后台管理员（sys_user） -->
+        <template v-if="!isPersonal">
+            <el-form :model="ruleForm" ref="ruleForm" label-width="100px">
+                <el-form-item label="用户名">
+                    <span>{{ruleForm.USERNAME}}</span>
+                </el-form-item>
+                <el-form-item label="角色">
+                    <el-tag type="success">{{ruleForm.role_manage_role_name1}}</el-tag>
+                </el-form-item>
+                <el-form-item label="密码">
+                    <el-input type="password" v-model="ruleForm.PASSWORD" placeholder="留空则不改"></el-input>
+                </el-form-item>
+                <el-form-item label="姓名">
+                    <el-input v-model="ruleForm.NAME"></el-input>
+                </el-form-item>
+                <el-form-item label="性别">
+                    <el-select v-model="ruleForm.sex" placeholder="请选择">
+                        <el-option label="男" value="1"></el-option>
+                        <el-option label="女" value="2"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="电话">
+                    <el-input v-model="ruleForm.phone"></el-input>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" style="margin-left:35%" @click="submitSysUser">保存</el-button>
+                </el-form-item>
+            </el-form>
+        </template>
+
+        <!-- 个人用户（app_user） -->
+        <template v-else>
+            <h3 style="margin-top:0;">个人设置</h3>
+            <p style="color:#64748b;font-size:13px;">账号与偏好保存在「个人用户」库中；以下提醒方式、默认视图等写入 <code>user_prefs</code>（JSON）。</p>
+            <el-form :model="pForm" ref="pForm" label-width="120px">
+                <el-form-item label="用户名">
+                    <el-input v-model="pForm.username" style="max-width:320px;"></el-input>
+                </el-form-item>
+                <el-form-item label="角色">
+                    <el-tag type="success">个人用户</el-tag>
+                </el-form-item>
+                <el-form-item label="密码">
+                    <el-input type="password" v-model="pForm.password" placeholder="留空则不改" style="max-width:320px;"></el-input>
+                </el-form-item>
+                <el-form-item label="姓名">
+                    <el-input v-model="pForm.nickname" style="max-width:320px;"></el-input>
+                </el-form-item>
+                <el-form-item label="性别">
+                    <el-select v-model="pForm.sex" placeholder="请选择" style="max-width:200px;">
+                        <el-option label="男" :value="1"></el-option>
+                        <el-option label="女" :value="0"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="手机">
+                    <el-input v-model="pForm.phone" style="max-width:320px;"></el-input>
+                </el-form-item>
+                <el-divider content-position="left">提醒与展示偏好</el-divider>
+                <el-form-item label="联系邮箱">
+                    <el-input v-model="prefs.email" placeholder="用于邮件提醒（若启用邮件渠道）" style="max-width:360px;"></el-input>
+                </el-form-item>
+                <el-form-item label="默认提前提醒">
+                    <el-input-number v-model="prefs.defaultReminderMinutes" :min="0" :max="10080" :step="5"></el-input-number>
+                    <span style="margin-left:8px;color:#94a3b8;font-size:12px;">分钟（0 表示不默认提前）</span>
+                </el-form-item>
+                <el-form-item label="提醒方式">
+                    <el-radio-group v-model="prefs.reminderChannel">
+                        <el-radio label="system">系统消息</el-radio>
+                        <el-radio label="email">邮件</el-radio>
+                    </el-radio-group>
+                </el-form-item>
+                <el-form-item label="重复日程提醒">
+                    <el-switch v-model="prefs.repeatReminder"></el-switch>
+                </el-form-item>
+                <el-form-item label="默认日程视图">
+                    <el-select v-model="prefs.defaultView" style="max-width:200px;">
+                        <el-option label="月视图" value="month"></el-option>
+                        <el-option label="周视图" value="week"></el-option>
+                        <el-option label="日视图" value="day"></el-option>
+                        <el-option label="列表" value="list"></el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="任务列表列">
+                    <div style="max-width:520px;">
+                        <el-checkbox v-model="col.id">主键</el-checkbox>
+                        <el-checkbox v-model="col.schedule">日程</el-checkbox>
+                        <el-checkbox v-model="col.task_name">任务名称</el-checkbox>
+                        <el-checkbox v-model="col.type">类型</el-checkbox>
+                        <el-checkbox v-model="col.assigner">分配人</el-checkbox>
+                        <el-checkbox v-model="col.assignee">被分配人</el-checkbox>
+                        <el-checkbox v-model="col.deadline">截止时间</el-checkbox>
+                        <el-checkbox v-model="col.status">状态</el-checkbox>
+                        <el-checkbox v-model="col.create_time">创建时间</el-checkbox>
+                        <el-checkbox v-model="col.update_time">更新时间</el-checkbox>
+                        <el-checkbox v-model="col.favorite">收藏</el-checkbox>
+                    </div>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" :loading="savingPersonal" @click="submitPersonal">保存</el-button>
+                </el-form-item>
+            </el-form>
+        </template>
+    </div>
+</div>
+</body>
+<script th:inline="javascript">
+    var basePath = "/" + window.location.pathname.split("/")[1];
+    var app = window.parent.indexApp;
+    function defaultPrefs() {
+        return {
+            email: '',
+            defaultReminderMinutes: 15,
+            reminderChannel: 'system',
+            repeatReminder: true,
+            defaultView: 'month',
+            listColumns: {}
+        };
+    }
+    function parsePrefs(str) {
+        var o = defaultPrefs();
+        if (!str || typeof str !== 'string') return o;
+        try {
+            var j = JSON.parse(str);
+            if (j && typeof j === 'object') {
+                if (j.email != null) o.email = String(j.email);
+                if (j.defaultReminderMinutes != null) o.defaultReminderMinutes = Number(j.defaultReminderMinutes) || 0;
+                if (j.reminderChannel) o.reminderChannel = j.reminderChannel === 'email' ? 'email' : 'system';
+                if (j.repeatReminder != null) o.repeatReminder = !!j.repeatReminder;
+                if (j.defaultView) o.defaultView = String(j.defaultView);
+                if (j.listColumns && typeof j.listColumns === 'object') o.listColumns = j.listColumns;
+            }
+        } catch (e) { }
+        return o;
+    }
+    new Vue({
+        el: "#cus_IndexApp",
+        data() {
+            return {
+                ruleForm: {},
+                userObj: {},
+                isPersonal: false,
+                pForm: { id: '', username: '', password: '', nickname: '', sex: '', phone: '' },
+                prefs: defaultPrefs(),
+                col: {
+                    id: true, schedule: true, task_name: true, type: true,
+                    assigner: true, assignee: true, deadline: true, status: true,
+                    create_time: true, update_time: true, favorite: true
+                },
+                savingPersonal: false
+            };
+        },
+        mounted() {
+            this.userObj = JSON.parse(localStorage.getItem("userInfo") || "{}");
+            this.isPersonal = this.userObj.login_user_type === 'personal';
+            if (this.isPersonal) {
+                this.loadPersonal();
+            } else {
+                var uid = this.userObj.id != null && this.userObj.id !== '' ? this.userObj.id : this.userObj.ID;
+                if (uid) {
+                    this.getUserInfo(uid);
+                }
+            }
+        },
+        methods: {
+            applyColFromPrefs(lc) {
+                var keys = ['id', 'schedule', 'task_name', 'type', 'assigner', 'assignee', 'deadline', 'status', 'create_time', 'update_time', 'favorite'];
+                for (var i = 0; i < keys.length; i++) {
+                    var k = keys[i];
+                    if (lc && Object.prototype.hasOwnProperty.call(lc, k)) {
+                        this.col[k] = lc[k] !== false;
+                    } else {
+                        this.col[k] = true;
+                    }
+                }
+            },
+            loadPersonal() {
+                var that = this;
+                $.ajax({
+                    type: "GET",
+                    url: basePath + "/app_user/me",
+                    success: function (res) {
+                        if (res.status !== 0 || !res.data) {
+                            that.$message.error(res.msg || '加载失败');
+                            return;
+                        }
+                        var d = res.data;
+                        that.pForm = {
+                            id: d.id,
+                            username: d.username || '',
+                            password: '',
+                            nickname: d.nickname || '',
+                            sex: d.sex !== undefined && d.sex !== null && d.sex !== '' ? (typeof d.sex === 'number' ? d.sex : parseInt(d.sex, 10)) : '',
+                            phone: d.phone || ''
+                        };
+                        that.prefs = parsePrefs(d.user_prefs);
+                        that.prefs.listColumns = that.prefs.listColumns || {};
+                        that.applyColFromPrefs(that.prefs.listColumns);
+                    }
+                });
+            },
+            getUserInfo(id) {
+                var that = this;
+                $.ajax({
+                    type: "GET",
+                    url: basePath + "/sys_user/querySys_userKey",
+                    data: {id: id},
+                    success: function (res) {
+                        if (res.data && res.data[0]) {
+                            that.userObj = res.data[0];
+                            that.ruleForm = res.data[0];
+                        }
+                    }
+                });
+            },
+            buildUserPrefsJson() {
+                var lc = {};
+                var keys = ['id', 'schedule', 'task_name', 'type', 'assigner', 'assignee', 'deadline', 'status', 'create_time', 'update_time', 'favorite'];
+                for (var i = 0; i < keys.length; i++) {
+                    lc[keys[i]] = !!this.col[keys[i]];
+                }
+                return JSON.stringify({
+                    email: this.prefs.email || '',
+                    defaultReminderMinutes: this.prefs.defaultReminderMinutes,
+                    reminderChannel: this.prefs.reminderChannel,
+                    repeatReminder: !!this.prefs.repeatReminder,
+                    defaultView: this.prefs.defaultView || 'month',
+                    listColumns: lc
+                });
+            },
+            submitSysUser() {
+                var that = this;
+                $.ajax({
+                    type: "POST",
+                    url: basePath + "/sys_user/updateSys_user",
+                    data: that.ruleForm,
+                    success: function (res) {
+                        if (res.status == 0) {
+                            that.$message.success('保存成功！');
+                            localStorage.setItem('userInfo', JSON.stringify(that.ruleForm));
+                            if (app) app.userObj = that.ruleForm;
+                            window.location.reload();
+                        }
+                    }
+                });
+            },
+            submitPersonal() {
+                var that = this;
+                var uid = that.pForm.id;
+                if (uid === undefined || uid === null || uid === '') {
+                    uid = that.userObj.id != null && that.userObj.id !== '' ? that.userObj.id : that.userObj.ID;
+                }
+                var payload = {
+                    id: uid,
+                    username: that.pForm.username,
+                    nickname: that.pForm.nickname,
+                    phone: that.pForm.phone,
+                    sex: that.pForm.sex,
+                    user_prefs: that.buildUserPrefsJson()
+                };
+                if (that.pForm.password) payload.password = that.pForm.password;
+                that.savingPersonal = true;
+                $.ajax({
+                    type: "POST",
+                    url: basePath + "/app_user/updateMe",
+                    data: payload,
+                    success: function (res) {
+                        if (res.status == 0) {
+                            that.$message.success(res.msg || '保存成功');
+                            var u = JSON.parse(localStorage.getItem("userInfo") || "{}");
+                            u.USERNAME = that.pForm.username;
+                            u.NAME = that.pForm.nickname;
+                            u.phone = that.pForm.phone;
+                            u.sex = that.pForm.sex;
+                            u.user_prefs = payload.user_prefs;
+                            localStorage.setItem('userInfo', JSON.stringify(u));
+                            if (app) {
+                                app.userObj = u;
+                            }
+                        } else {
+                            that.$message.error(res.msg || '保存失败');
+                        }
+                    },
+                    error: function (xhr) {
+                        var m = (xhr && xhr.responseJSON && xhr.responseJSON.msg) ? xhr.responseJSON.msg : "保存失败，请检查登录状态或接口是否可用";
+                        that.$message.error(m);
+                    },
+                    complete: function () {
+                        that.savingPersonal = false;
+                    }
+                });
+            }
+        }
+    });
+</script>
+</html>

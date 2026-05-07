@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.testdemo.mapper.App_schedule_favoriteMapper">
+
+    <select id="countFavorite" resultType="int">
+        SELECT COUNT(1) FROM app_schedule_favorite WHERE user_id = #{user_id} AND task_id = #{task_id}
+    </select>
+
+    <insert id="insertFavorite" parameterType="pd">
+        INSERT INTO app_schedule_favorite (user_id, task_id, create_time)
+        VALUES (#{user_id}, #{task_id}, DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s'))
+    </insert>
+
+    <delete id="deleteFavorite">
+        DELETE FROM app_schedule_favorite WHERE user_id = #{user_id} AND task_id = #{task_id}
+    </delete>
+</mapper>

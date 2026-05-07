@@ -1,0 +1,928 @@
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--日程任务分配管理界面-->
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
+    <title>日程任务分配管理</title>
+    <link rel="shortcut icon" href="../static/img/favicon.jpg">
+    <!--css资源引用-->
+    <link rel="stylesheet" href="../static/element-ui/lib/theme-chalk/index.css">
+    <link rel="stylesheet" href="../static/css/common.css">
+    <!--js资源引用-->
+    <script type="text/javascript">
+        var html = document.getElementsByTagName("html")[0];
+        var w = document.documentElement.clientWidth || document.body.clientWidth;
+        html.style.fontSize = w / 1366 + "px";
+    </script>
+    <script src="../static/js/vue.js"></script>
+    <script src="../static/element-ui/lib/index.js"></script>
+    <script src="../static/js/jquery-2.2.3.min.js"></script>
+    <script src="../static/js/elementUI_icon.js"></script>
+    <!--验证规则-->
+    <script src="../static/js/elementui_validator.js"></script>
+    <!--富文本资源文件-->
+    <script type="text/javascript" charset="utf-8" src="../static/ueditor.config.js"></script>
+    <script type="text/javascript" charset="utf-8" src="../static/ueditor.all.min.js"></script>
+</head>
+<body>
+<div id="cus_IndexApp" v-cloak>
+    <!--顶部搜索区功能按钮-->
+    <div class="admin-page-toolbar">
+        <el-button size="mini" @click="add" v-if="name_add" icon="el-icon-circle-plus-outline" class="table-button-add">
+            新增
+        </el-button>
+        <el-select placeholder="请选择日程ID" v-model="soMoreUserIpt.schedule_id" size="mini" class="top_divR"
+                   clearable>
+            <el-option
+                    v-for="item in classOptionsschedule_id"
+                    :key="item.id"
+                    :label="item.title"
+                    :value="item.id">
+            </el-option>
+        </el-select>
+        <el-select placeholder="请选择分配人ID" v-model="soMoreUserIpt.assigner_id" size="mini" class="top_divR"
+                   clearable>
+            <el-option
+                    v-for="item in classOptionsassigner_id"
+                    :key="item.id"
+                    :label="userDisplayName(item)"
+                    :value="item.id">
+            </el-option>
+        </el-select>
+        <el-select placeholder="请选择被分配人ID" v-model="soMoreUserIpt.assignees_id" size="mini" class="top_divR"
+                   clearable>
+            <el-option
+                    v-for="item in classOptionsassignees_id"
+                    :key="item.id"
+                    :label="userDisplayName(item)"
+                    :value="item.id">
+            </el-option>
+        </el-select>
+        <el-button size="mini" @click="handleCurrentChange(1)" v-if="name_query" icon="el-icon-search"
+                   class="table-button-search">搜索
+        </el-button>
+    </div>
+    <div class="admin-page-toolbar" style="flex-wrap:wrap;align-items:center;" v-if="listColPrefsLoaded">
+        <span style="font-size:12px;color:#64748b;margin-right:8px;">默认视图偏好：{{defaultViewLabel}}</span>
+        <span style="font-size:12px;color:#64748b;margin:0 12px 0 0;">列表列</span>
+        <el-checkbox v-model="listColShow.id" @change="persistListCols" style="margin-right:6px;">主键</el-checkbox>
+        <el-checkbox v-model="listColShow.schedule" @change="persistListCols">日程</el-checkbox>
+        <el-checkbox v-model="listColShow.task_name" @change="persistListCols">任务</el-checkbox>
+        <el-checkbox v-model="listColShow.type" @change="persistListCols">类型</el-checkbox>
+        <el-checkbox v-model="listColShow.assigner" @change="persistListCols">分配人</el-checkbox>
+        <el-checkbox v-model="listColShow.assignee" @change="persistListCols">被分配人</el-checkbox>
+        <el-checkbox v-model="listColShow.deadline" @change="persistListCols">截止</el-checkbox>
+        <el-checkbox v-model="listColShow.status" @change="persistListCols">状态</el-checkbox>
+        <el-checkbox v-model="listColShow.create_time" @change="persistListCols">创建</el-checkbox>
+        <el-checkbox v-model="listColShow.update_time" @change="persistListCols">更新</el-checkbox>
+        <el-checkbox v-model="listColShow.favorite" @change="persistListCols">收藏</el-checkbox>
+    </div>
+    <!--列表数据展示区-->
+    <div class="cusMTable">
+        <el-table :data="cusTableLstInit" style="width: 100%;" stripe header-row-class-name="header-row-class-name">
+            <el-table-column
+                    v-if="colVisible('id')"
+                    prop="id"
+                    label="主键id">
+            </el-table-column>
+            <el-table-column
+                    v-if="colVisible('schedule')"
+                    prop="schedule_id"
+                    label="日程ID">
+                <template slot-scope="scope">
+                    <el-tag type="success">{{scope.row.schedule_id_title1}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    v-if="colVisible('task_name')"
+                    prop="task_name"
+                    label="任务名称">
+            </el-table-column>
+            <el-table-column
+                    v-if="colVisible('type')"
+                    prop="schedule_type_code"
+                    label="类型"
+                    min-width="120">
+                <template slot-scope="scope">
+                    <span v-if="scope.row.schedule_type_code">{{scope.row.schedule_type_code}}</span>
+                    <span v-else style="color:#94a3b8;">—</span>
+                    <el-tag v-if="scope.row.schedule_type_name1" size="mini" type="info" style="margin-left:4px;">{{scope.row.schedule_type_name1}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    v-if="colVisible('assigner')"
+                    prop="assigner_id"
+                    label="分配人ID">
+                <template slot-scope="scope">
+                    <el-tag type="success">{{scope.row.assigner_id_USERNAME1}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    v-if="colVisible('assignee')"
+                    prop="assignees_id"
+                    label="被分配人ID">
+                <template slot-scope="scope">
+                    <el-tag type="success">{{scope.row.assignees_id_USERNAME1}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    v-if="colVisible('deadline')"
+                    prop="deadline"
+                    label="截止时间">
+            </el-table-column>
+            <el-table-column
+                    v-if="colVisible('status')"
+                    prop="status"
+                    label="状态"
+                    width="100">
+                <template slot-scope="scope">
+                    <el-tag type="info" v-if="scope.row.status=='0'">待确认</el-tag>
+                    <el-tag type="warning" v-else-if="scope.row.status=='1'">已确认</el-tag>
+                    <el-tag type="success" v-else-if="scope.row.status=='2'">已完成</el-tag>
+                    <el-tag type="danger" v-else-if="scope.row.status=='3'">已逾期</el-tag>
+                    <el-tag v-else type="info">{{scope.row.status || '—'}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    v-if="colVisible('create_time')"
+                    prop="create_time"
+                    label="创建时间">
+            </el-table-column>
+            <el-table-column
+                    v-if="colVisible('update_time')"
+                    prop="update_time"
+                    label="更新时间">
+            </el-table-column>
+            <el-table-column v-if="colVisible('favorite')" label="收藏" width="100">
+                <template slot-scope="scope">
+                    <el-button type="text" size="mini" @click="toggleFavorite(scope.row)">
+                        <i :class="Number(scope.row.favorited) > 0 ? 'el-icon-star-on' : 'el-icon-star-off'"></i>
+                        {{ Number(scope.row.favorited) > 0 ? '已收藏' : '收藏' }}
+                    </el-button>
+                </template>
+            </el-table-column>
+            <el-table-column fixed="right" label="操作" min-width="300" width="340">
+                <template slot-scope="scope">
+                    <div class="operation-buttons">
+                        <el-button @click="view(scope.row)" class="table-button-view operation-btn" icon="el-icon-view" size="mini">
+                            查看
+                        </el-button>
+                        <el-button @click="edit(scope.row)" class="table-button-edit operation-btn" icon="el-icon-edit" size="mini"
+                                   v-if="name_edit">编辑
+                        </el-button>
+                        <el-button @click="openShareToTeamDialog(scope.row)" class="table-button-edit operation-btn" icon="el-icon-share" size="mini"
+                                   v-if="name_edit">共享到团队
+                        </el-button>
+                        <el-button @click="del(scope.row)" class="table-button-delete operation-btn" icon="el-icon-delete" size="mini"
+                                   v-if="name_delete">删除
+                        </el-button>
+                    </div>
+                </template>
+            </el-table-column>
+        </el-table>
+        <div style="text-align:right;">
+            <el-pagination @current-change="handleCurrentChange" :current-page="pageInit.currentPage" :page-size="10"
+                           layout="total, prev, pager, next, jumper" :total="pageInit.totalResult">
+            </el-pagination>
+        </div>
+    </div>
+    <!--新增、编辑、详情dialog界面-->
+    <el-dialog :title="titleName" :visible.sync="addNewCustomer" width="60%" top="5vh">
+        <el-form :model="ruleForm" ref="ruleForm" label-width="100px" class="demo-ruleForm" :rules="rules"
+                 :disabled="viewDisabled">
+            <el-form-item label="日程ID" prop="schedule_id">
+                <!--下拉框-->
+                <div>
+                    <el-select v-model="ruleForm.schedule_id" placeholder="请选择日程ID">
+                        <el-option v-for="item in classOptionsschedule_id" :key="item.id" :label="item.title"
+                                   :value="item.id"></el-option>
+                    </el-select>
+                </div>
+            </el-form-item>
+            <el-form-item label="任务名称" prop="task_name">
+                <el-input v-model="ruleForm.task_name"></el-input>
+            </el-form-item>
+            <el-form-item label="日程类型" prop="schedule_type_code">
+                <el-select v-model="ruleForm.schedule_type_code" filterable clearable allow-create default-first-option
+                           placeholder="选择或输入类型编码（在「日程类型管理」维护）" style="width:100%;">
+                    <el-option v-for="t in classOptionsschedule_type" :key="t.type_code"
+                               :label="t.type_name + '（' + t.type_code + '）'" :value="t.type_code"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="任务内容" prop="task_content">
+                <el-input type="textarea" v-model="ruleForm.task_content" auto></el-input>
+            </el-form-item>
+            <el-form-item label="分配人ID" prop="assigner_id" v-if="!isPersonalUser">
+                <!--下拉框-->
+                <div>
+                    <el-select v-model="ruleForm.assigner_id" placeholder="请选择分配人ID">
+                        <el-option v-for="item in classOptionsassigner_id" :key="item.id" :label="userDisplayName(item)"
+                                   :value="item.id"></el-option>
+                    </el-select>
+                </div>
+            </el-form-item>
+            <el-form-item label="被分配人" prop="assignees_id" v-if="!isPersonalUser">
+                <div>
+                    <el-radio-group v-model="ruleForm.assignees_id">
+                        <el-radio-button :label="item.id" v-for="item in classOptionsassignees_id" :key="item.id">
+                            {{userDisplayName(item)}}
+                        </el-radio-button>
+                    </el-radio-group>
+                </div>
+            </el-form-item>
+            <el-form-item label="执行人" v-if="isPersonalUser">
+                <el-tag type="success">我自己</el-tag>
+            </el-form-item>
+            <el-form-item label="截止时间" prop="deadline">
+                <el-date-picker
+                        v-model="ruleForm.deadline"
+                        type="date"
+                        placeholder="选择日期"
+                        format="yyyy 年 MM 月 dd 日"
+                        value-format="yyyy-MM-dd">
+                </el-date-picker>
+            </el-form-item>
+            <el-form-item label="任务状态" prop="status">
+                <el-select v-model="ruleForm.status" placeholder="请选择状态" style="width:100%;">
+                    <el-option label="0 待确认" value="0"></el-option>
+                    <el-option label="1 已确认" value="1"></el-option>
+                    <el-option label="2 已完成" value="2"></el-option>
+                    <el-option label="3 已逾期" value="3"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item v-if="!viewDisabled">
+                <el-button type="primary" style="margin-left:35%" @click="submitForm">立即保存</el-button>
+            </el-form-item>
+        </el-form>
+    </el-dialog>
+    <el-dialog title="个人日程共享到团队" :visible.sync="shareToTeamDialogVisible" width="45%" top="10vh">
+        <el-form :model="shareToTeamForm" label-width="100px">
+            <el-form-item label="任务">
+                <el-tag type="info">{{shareToTeamForm.task_name || '-'}}</el-tag>
+            </el-form-item>
+            <el-form-item label="团队">
+                <el-select v-model="shareToTeamForm.team_id" placeholder="请选择团队" @change="onShareTeamChange" style="width:100%;">
+                    <el-option v-for="item in shareTeamOptions" :key="item.id" :label="item.team_name" :value="String(item.id)"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="可见范围">
+                <el-select v-model="shareToTeamForm.visibility_type" style="width:100%;">
+                    <el-option label="全体成员" value="1"></el-option>
+                    <el-option label="指定成员" value="2"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="负责人">
+                <el-select v-model="shareToTeamForm.leader_user_id" filterable clearable style="width:100%;">
+                    <el-option v-for="item in shareTeamMemberOptions" :key="item.id"
+                               :label="item.user_id_team_name1 || item.user_id_username1 || ('用户#'+(item.user_id || item.id))"
+                               :value="String(item.user_id || item.id)"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="指定成员" v-if="shareToTeamForm.visibility_type==='2'">
+                <el-select v-model="shareToTeamForm.member_user_ids" multiple filterable clearable style="width:100%;">
+                    <el-option v-for="item in shareTeamMemberOptions" :key="item.id"
+                               :label="item.user_id_team_name1 || item.user_id_username1 || ('用户#'+(item.user_id || item.id))"
+                               :value="String(item.user_id || item.id)"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="primary" @click="submitShareToTeam">立即共享</el-button>
+            </el-form-item>
+        </el-form>
+    </el-dialog>
+</div>
+</body>
+<script th:inline="javascript">
+    var test_detailsue = null;
+    var test_detailsue;
+    var ue = null;
+    var basePath = "/" + window.location.pathname.split("/")[1];
+    let app = window.parent.App;
+    <!--使用vue-->
+    new Vue({
+        el: "#cus_IndexApp",
+        <!--初始化 data -->
+        data() {
+            return {
+                pageInit: {
+                    currentPage: 1,
+                },
+                cusTableLstInit: [],
+                soMoreUserIpt: {},
+                addNewCustomer: false,
+                ruleForm: {},
+                rules: {
+                    id: [
+                        {required: false, message: '请填写主键id', trigger: 'blur'}
+                    ],
+                    schedule_id: [
+                        {required: false, message: '请填写日程ID', trigger: 'change'}
+                    ],
+                    task_name: [
+                        {required: false, message: '请填写任务名称', trigger: 'blur'}
+                    ],
+                    task_content: [
+                        {required: false, message: '请填写任务内容', trigger: 'blur'}
+                    ],
+                    assigner_id: [
+                        {required: false, message: '请填写分配人ID', trigger: 'change'}
+                    ],
+                    assignees_id: [
+                        {required: false, message: '请填写被分配人ID', trigger: 'change'}
+                    ],
+                    deadline: [
+                        {required: false, message: '请填写截止时间', trigger: 'change'}
+                    ],
+                    status: [
+                        {required: false, message: '请填写状态：0待确认 1已确认 2已完成 3已逾期', trigger: 'change'}
+                    ],
+                    create_time: [
+                        {required: false, message: '请填写创建时间', trigger: 'blur'}
+                    ],
+                    update_time: [
+                        {required: false, message: '请填写更新时间', trigger: 'blur'}
+                    ],
+                },
+                viewDisabled: false,
+                titleName: "新增",
+                classOptionsschedule_id: [],
+                classOptionsschedule_type: [],
+                classOptionsassigner_id: [],
+                classOptionsassignees_id: [],
+                classOptions: [],
+                userObj: [],
+                name_add: false,//新增权限
+                name_edit: false,//编辑权限
+                name_delete: false,//删除权限
+                name_query: false,//查询权限
+                tenantList: [],
+                uploadUrl: basePath,
+                iconList: iconList,
+                isPersonalUser: false,
+                listColShow: {
+                    id: true, schedule: true, task_name: true, type: true,
+                    assigner: true, assignee: true, deadline: true, status: true,
+                    create_time: true, update_time: true, favorite: true
+                },
+                listColPrefsLoaded: false,
+                defaultViewHintKey: 'month',
+                listColSaveTimer: null,
+                shareToTeamDialogVisible: false,
+                shareToTeamForm: {task_id: '', task_name: '', team_id: '', visibility_type: '1', leader_user_id: '', member_user_ids: []},
+                shareTeamOptions: [],
+                shareTeamMemberOptions: [],
+            }
+        },
+        computed: {
+            defaultViewLabel() {
+                var m = {month: '月视图', week: '周视图', day: '日视图', list: '列表'};
+                return m[this.defaultViewHintKey] || this.defaultViewHintKey || '月视图';
+            }
+        },
+        <!--初始化 mounted -->
+        mounted() {
+            this.userObj = JSON.parse(localStorage.getItem("userInfo") || "{}");
+            this.isPersonalUser = !!(this.userObj && this.userObj.login_user_type === 'personal');
+            this.loadListColPrefs();
+            var hasManualDateFilter = false;
+            // 来自首页卡片：按本日/本周/本月过滤；todo_only=1 仅未开始/进行中
+            try {
+                var pramAll = new URLSearchParams('?' + (window.location.href.split('?')[1] || ''));
+                var date_type = pramAll.get('date_type');
+                var todo_only = pramAll.get('todo_only');
+                if (date_type) {
+                    hasManualDateFilter = true;
+                    this.soMoreUserIpt.date_type = date_type;
+                    // 仅个人账号：首页卡片默认只看与自己相关的任务（sys_user 与 app_user id 体系不同，管理员不应带 participant 否则看不到个人建的任务）
+                    if (this.isPersonalUser && this.userObj && (this.userObj.id || this.userObj.ID)) {
+                        this.soMoreUserIpt.participant_user_id = (this.userObj.id != null && this.userObj.id !== '') ? this.userObj.id : this.userObj.ID;
+                    }
+                }
+                if (todo_only) {
+                    this.soMoreUserIpt.todo_only = todo_only;
+                    hasManualDateFilter = true;
+                    if (this.isPersonalUser && this.userObj && (this.userObj.id || this.userObj.ID)) {
+                        this.soMoreUserIpt.participant_user_id = (this.userObj.id != null && this.userObj.id !== '') ? this.userObj.id : this.userObj.ID;
+                    }
+                }
+            } catch (e) {
+            }
+            if (!hasManualDateFilter) {
+                this.applyDefaultViewFilter();
+            }
+            this.getUserBtnList(this.userObj.role_manage_id);//调用获取权限按钮
+            this.handleCurrentChange(1);
+            this.getClassOptionsschedule_id();
+            this.getClassOptionsschedule_type();
+            this.getClassOptionsassigner_id();
+            this.getClassOptionsassignees_id();
+        },
+        beforeDestroy() {
+            if (this.listColSaveTimer) {
+                clearTimeout(this.listColSaveTimer);
+                this.listColSaveTimer = null;
+                this.syncListColumnsToServerIfPersonal();
+            }
+        },
+        <!--初始化 methods -->
+        methods: {
+            applyDefaultViewFilter() {
+                // 后台/团队等账号应默认列出全部任务，勿套用「月/周/日」截止时间筛选（否则只看到当前月/周/日，像丢数据）
+                if (!this.isPersonalUser) {
+                    delete this.soMoreUserIpt.date_type;
+                    return;
+                }
+                // 仅个人账号：按偏好默认视图套用 date_type，并加 participant（见上）
+                if (this.defaultViewHintKey === 'month') {
+                    this.soMoreUserIpt.date_type = 'month';
+                } else if (this.defaultViewHintKey === 'week') {
+                    this.soMoreUserIpt.date_type = 'week';
+                } else if (this.defaultViewHintKey === 'day') {
+                    this.soMoreUserIpt.date_type = 'today';
+                } else {
+                    delete this.soMoreUserIpt.date_type;
+                }
+                if (this.userObj && (this.userObj.id || this.userObj.ID) && this.soMoreUserIpt.date_type) {
+                    this.soMoreUserIpt.participant_user_id = (this.userObj.id != null && this.userObj.id !== '') ? this.userObj.id : this.userObj.ID;
+                }
+            },
+            loadListColPrefs() {
+                var u = {};
+                try {
+                    u = JSON.parse(localStorage.getItem("userInfo") || "{}");
+                } catch (e) {
+                    u = {};
+                }
+                var lc = {};
+                var dv = 'month';
+                try {
+                    if (u.user_prefs) {
+                        var pr = JSON.parse(u.user_prefs);
+                        if (pr && pr.listColumns) {
+                            lc = pr.listColumns;
+                        }
+                        if (pr && pr.defaultView) {
+                            dv = String(pr.defaultView);
+                        }
+                    }
+                } catch (e2) {
+                }
+                var keys = ['id', 'schedule', 'task_name', 'type', 'assigner', 'assignee', 'deadline', 'status', 'create_time', 'update_time', 'favorite'];
+                for (var i = 0; i < keys.length; i++) {
+                    var k = keys[i];
+                    this.$set(this.listColShow, k, lc[k] !== false);
+                }
+                this.defaultViewHintKey = dv;
+                this.listColPrefsLoaded = true;
+            },
+            colVisible(key) {
+                if (!this.listColPrefsLoaded) {
+                    return true;
+                }
+                return this.listColShow[key] !== false;
+            },
+            persistListCols() {
+                var u = {};
+                try {
+                    u = JSON.parse(localStorage.getItem("userInfo") || "{}");
+                } catch (e) {
+                    u = {};
+                }
+                var base = {};
+                try {
+                    if (u.user_prefs) {
+                        base = JSON.parse(u.user_prefs);
+                    }
+                } catch (e2) {
+                }
+                if (!base || typeof base !== 'object') {
+                    base = {};
+                }
+                base.listColumns = {
+                    id: !!this.listColShow.id,
+                    schedule: !!this.listColShow.schedule,
+                    task_name: !!this.listColShow.task_name,
+                    type: !!this.listColShow.type,
+                    assigner: !!this.listColShow.assigner,
+                    assignee: !!this.listColShow.assignee,
+                    deadline: !!this.listColShow.deadline,
+                    status: !!this.listColShow.status,
+                    create_time: !!this.listColShow.create_time,
+                    update_time: !!this.listColShow.update_time,
+                    favorite: !!this.listColShow.favorite
+                };
+                u.user_prefs = JSON.stringify(base);
+                localStorage.setItem("userInfo", JSON.stringify(u));
+                var that = this;
+                if (this.listColSaveTimer) {
+                    clearTimeout(this.listColSaveTimer);
+                }
+                this.listColSaveTimer = setTimeout(function () {
+                    that.listColSaveTimer = null;
+                    that.syncListColumnsToServerIfPersonal();
+                }, 400);
+            },
+            /** 个人用户：列表列偏好写入 app_user.user_prefs */
+            syncListColumnsToServerIfPersonal() {
+                var u = {};
+                try {
+                    u = JSON.parse(localStorage.getItem("userInfo") || "{}");
+                } catch (e) {
+                    return;
+                }
+                if (u.login_user_type !== "personal") {
+                    return;
+                }
+                var id = u.id != null && u.id !== "" ? u.id : u.ID;
+                if (id === undefined || id === null || id === "") {
+                    return;
+                }
+                var prefs = u.user_prefs != null ? String(u.user_prefs) : "{}";
+                var that = this;
+                $.ajax({
+                    type: "POST",
+                    url: basePath + "/app_user/updateMe",
+                    data: {id: id, user_prefs: prefs},
+                    dataType: "json",
+                    success: function (res) {
+                        if (res.status !== 0) {
+                            that.$message.warning(res.msg || "列显示偏好未能保存到服务器");
+                        }
+                    },
+                    error: function () {
+                        that.$message.warning("网络异常，列显示偏好仅保存在本机");
+                    }
+                });
+            },
+            userDisplayName(item) {
+                if (!item) return '';
+                return item.USERNAME || item.username || ('ID:' + item.id);
+            },
+            isValidTaskAssigner(item) {
+                if (!item) return false;
+                var role = String(item.role_manage_id == null ? '' : item.role_manage_id);
+                var status = String(item.account_status == null ? '1' : item.account_status);
+                return (role === '1' || role === '2') && status === '1';
+            },
+//获取权限按钮方法
+            getUserBtnList(role_manage_id) {
+                var pram = new URLSearchParams('?' + (window.location.href.split('?')[1] || ''));
+                var child_menu_id = pram.get('child_menu_id');
+                let that = this;
+                var applyPerm = function (res) {
+                    if (!res || !res.data || !res.data.length) {
+                        that.name_add = that.name_edit = that.name_delete = that.name_query = false;
+                        return;
+                    }
+                    var childMenu = res.data[0];
+                    that.name_add = childMenu.name_add == '1';
+                    that.name_edit = childMenu.name_edit == '1';
+                    that.name_delete = childMenu.name_delete == '1';
+                    that.name_query = childMenu.name_query == '1';
+                };
+                var fetchPerm = function (cid) {
+                    $.ajax({
+                        type: "GET",
+                        url: basePath + "/permission_menu/queryPermission_menuKey",
+                        data: {role_manage_id: role_manage_id, child_menu_id: cid || ''},
+                        success: function (res) {
+                            applyPerm(res);
+                        }
+                    });
+                };
+                if (child_menu_id) {
+                    fetchPerm(child_menu_id);
+                    return;
+                }
+                $.ajax({
+                    type: "GET",
+                    url: basePath + "/child_menu/queryChild_menuKey",
+                    data: {menu_href: 'login_href/idx_app_schedule_task'},
+                    success: function (cm) {
+                        var id = (cm && cm.data && cm.data[0] && cm.data[0].id != null) ? cm.data[0].id : '';
+                        fetchPerm(id);
+                    },
+                    error: function () {
+                        fetchPerm('');
+                    }
+                });
+            },
+            windowOpen(url) {
+                window.open(url);
+            },
+            toggleFavorite(row) {
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: basePath + "/app_schedule_task/toggleScheduleFavorite",
+                    data: {task_id: row.id},
+                    dataType: "json",
+                    success: function (res) {
+                        if (res.status == 0) {
+                            if (res.data && typeof res.data.favorited !== 'undefined') {
+                                that.$set(row, 'favorited', res.data.favorited ? 1 : 0);
+                            }
+                            that.$message.success(res.msg || '操作成功');
+                        } else {
+                            that.$message.error(res.msg || '操作失败');
+                        }
+                    },
+                    error: function (xhr) {
+                        var m = (xhr && xhr.responseJSON && xhr.responseJSON.msg) ? xhr.responseJSON.msg : '请求失败（请确认已登录且已创建 app_schedule_favorite 表）';
+                        that.$message.error(m);
+                    }
+                });
+            },
+            ensureShareTeamOptions() {
+                let that = this;
+                if (that.shareTeamOptions && that.shareTeamOptions.length > 0) {
+                    return;
+                }
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/app_team/queryApp_teamKey`,
+                    data: {audit_status: '1', status: '1'},
+                    success: function (res) {
+                        that.shareTeamOptions = (res && res.data) ? res.data : [];
+                    }
+                });
+            },
+            onShareTeamChange(teamId) {
+                let that = this;
+                that.shareTeamMemberOptions = [];
+                if (!teamId) return;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/app_team_user/queryApp_team_userKey`,
+                    data: {team_id: teamId, status: '1'},
+                    success: function (res) {
+                        that.shareTeamMemberOptions = (res && res.data) ? res.data : [];
+                    }
+                });
+            },
+            openShareToTeamDialog(row) {
+                this.ensureShareTeamOptions();
+                this.shareToTeamForm = {
+                    task_id: String(row.id),
+                    task_name: row.task_name || '',
+                    team_id: '',
+                    visibility_type: '1',
+                    leader_user_id: '',
+                    member_user_ids: []
+                };
+                this.shareTeamMemberOptions = [];
+                this.shareToTeamDialogVisible = true;
+            },
+            submitShareToTeam() {
+                let that = this;
+                if (!that.shareToTeamForm.team_id) {
+                    that.$message.warning("请选择团队");
+                    return;
+                }
+                if (that.shareToTeamForm.visibility_type === '2' && (!that.shareToTeamForm.member_user_ids || !that.shareToTeamForm.member_user_ids.length)) {
+                    that.$message.warning("指定成员模式下请至少选择一位成员");
+                    return;
+                }
+                $.ajax({
+                    type: "POST",
+                    url: `${basePath}/app_schedule_task/shareTaskToTeam`,
+                    data: {
+                        task_id: that.shareToTeamForm.task_id,
+                        team_id: that.shareToTeamForm.team_id,
+                        visibility_type: that.shareToTeamForm.visibility_type,
+                        leader_user_id: that.shareToTeamForm.leader_user_id,
+                        member_user_ids: (that.shareToTeamForm.member_user_ids || []).join(',')
+                    },
+                    success: function (res) {
+                        if (res.status === 0) {
+                            that.$message.success(res.msg || "共享成功");
+                            that.shareToTeamDialogVisible = false;
+                        } else {
+                            that.$message.error(res.msg || "共享失败");
+                        }
+                    },
+                    error: function () {
+                        that.$message.error("共享请求失败");
+                    }
+                });
+            },
+            view(row) {
+                this.titleName = "详情";
+                this.ruleForm = Object.assign({}, row);
+                this.viewDisabled = true;
+                this.addNewCustomer = true;
+                this.ruleForm.schedule_id = Number(row.schedule_id);
+                this.ruleForm.assigner_id = Number(row.assigner_id);
+                var aid = row.assignee_id != null && row.assignee_id !== '' ? row.assignee_id : row.assignees_id;
+                this.ruleForm.assignees_id = aid !== null && aid !== '' ? Number(aid) : '';
+                if (this.ruleForm.status !== undefined && this.ruleForm.status !== null) {
+                    this.ruleForm.status = String(this.ruleForm.status);
+                }
+            },
+            add() {
+                this.titleName = "新增";
+                this.ruleForm = {status: '0', schedule_type_code: ''};
+                if (this.isPersonalUser && this.userObj && (this.userObj.id || this.userObj.ID)) {
+                    var uid = (this.userObj.id != null && this.userObj.id !== '') ? this.userObj.id : this.userObj.ID;
+                    this.ruleForm.assignees_id = Number(uid);
+                    this.ruleForm.assigner_id = '';
+                }
+                this.addNewCustomer = true;
+                this.viewDisabled = false;
+            },
+            edit(row) {
+                this.titleName = "编辑";
+                this.ruleForm = Object.assign({}, row);
+                this.addNewCustomer = true;
+                this.viewDisabled = false;
+                this.ruleForm.schedule_id = Number(row.schedule_id);
+                this.ruleForm.assigner_id = Number(row.assigner_id);
+                var aid = row.assignee_id != null && row.assignee_id !== '' ? row.assignee_id : row.assignees_id;
+                this.ruleForm.assignees_id = aid !== null && aid !== '' ? Number(aid) : '';
+                if (this.ruleForm.status !== undefined && this.ruleForm.status !== null) {
+                    this.ruleForm.status = String(this.ruleForm.status);
+                }
+                if (this.isPersonalUser && this.userObj && (this.userObj.id || this.userObj.ID)) {
+                    var uid = (this.userObj.id != null && this.userObj.id !== '') ? this.userObj.id : this.userObj.ID;
+                    this.ruleForm.assignees_id = Number(uid);
+                    this.ruleForm.assigner_id = '';
+                }
+            },
+            getClassOptionsschedule_id() {
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/app_team_schedule/queryApp_team_scheduleKey`,
+                    data: {},
+                    success: function (data) {
+                        that.classOptionsschedule_id = data.data;
+                    }
+                })
+            },
+            getClassOptionsschedule_type() {
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: basePath + "/app_schedule_type/queryApp_schedule_typeKey",
+                    data: {status: '1'},
+                    success: function (data) {
+                        if (data && data.data) {
+                            that.classOptionsschedule_type = data.data;
+                        }
+                    },
+                    error: function () {
+                        that.classOptionsschedule_type = [];
+                    }
+                })
+            },
+            getClassOptionsassigner_id() {
+                let that = this;
+                if (this.isPersonalUser) {
+                    that.classOptionsassigner_id = [];
+                    return;
+                }
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/sys_user/querySys_userKey`,
+                    data: {},
+                    success: function (data) {
+                        var all = (data && data.data) ? data.data : [];
+                        that.classOptionsassigner_id = all.filter(function (x) {
+                            return that.isValidTaskAssigner(x);
+                        });
+                    }
+                })
+            },
+            getClassOptionsassignees_id() {
+                let that = this;
+                if (this.isPersonalUser) {
+                    var uid = (this.userObj && (this.userObj.id || this.userObj.ID)) ? ((this.userObj.id != null && this.userObj.id !== '') ? this.userObj.id : this.userObj.ID) : '';
+                    that.classOptionsassignees_id = uid ? [{id: Number(uid), username: '我自己'}] : [];
+                    return;
+                }
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/app_user/queryApp_userKey`,
+                    data: {account_status: '1'},
+                    success: function (data) {
+                        that.classOptionsassignees_id = data.data || [];
+                    }
+                })
+            },
+            submitForm() {
+                let that = this;
+                this.$refs.ruleForm.validate((valid) => {
+                    if (valid) {
+                        if (that.isPersonalUser && that.userObj && (that.userObj.id || that.userObj.ID)) {
+                            var uid = (that.userObj.id != null && that.userObj.id !== '') ? that.userObj.id : that.userObj.ID;
+                            that.ruleForm.assignees_id = uid;
+                            that.ruleForm.assigner_id = '';
+                        }
+                        if (this.titleName == "新增") {
+                            $.ajax({
+                                type: "POST",
+                                url: basePath + "/app_schedule_task/addApp_schedule_taskNo",
+                                data: that.ruleForm,
+                                dataType: "json",
+                                success: function (res) {
+                                    if (res.status == 0) {
+                                        that.$message.success(res.msg || "添加成功");
+                                        that.addNewCustomer = false;
+                                        that.handleCurrentChange(1);
+                                    } else {
+                                        that.$message.error(res.msg || "添加失败");
+                                    }
+                                },
+                                error: function () {
+                                    that.$message.error("请求失败，请检查网络或登录状态");
+                                }
+                            })
+                        } else if (this.titleName == "编辑") {
+                            $.ajax({
+                                type: "POST",
+                                url: basePath + "/app_schedule_task/updateApp_schedule_task",
+                                data: that.ruleForm,
+                                dataType: "json",
+                                success: function (res) {
+                                    if (res.status == 0) {
+                                        that.$message.success(res.msg || "保存成功");
+                                        that.addNewCustomer = false;
+                                        that.handleCurrentChange(that.pageInit.currentPage || 1);
+                                    } else {
+                                        that.$message.error(res.msg || "保存失败");
+                                    }
+                                },
+                                error: function () {
+                                    that.$message.error("请求失败，请检查网络或登录状态");
+                                }
+                            })
+                        }
+                    } else {
+                        console.log('error submit!!');
+                        return false;
+                    }
+                });
+            },
+            changeSearchFlag() {
+                this.topSearchFlag = false;
+            },
+            handleCurrentChange(val) {
+                this.loading = true;
+                this.soMoreUserIpt.currentPage = val;
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/app_schedule_task/queryPageApp_schedule_taskKeyList`,
+                    data: that.soMoreUserIpt,
+                    success: function (data) {
+                        var rows = data.rows || [];
+                        for (var i = 0; i < rows.length; i++) {
+                            var r = rows[i];
+                            if (r.favorited === undefined || r.favorited === null || r.favorited === '') {
+                                r.favorited = 0;
+                            } else {
+                                r.favorited = Number(r.favorited) || 0;
+                            }
+                        }
+                        that.cusTableLstInit = rows;
+                        that.pageInit.totalResult = data.total;
+                        that.pageInit.currentPage = val;
+                        that.loading = false;
+                    }
+                })
+            },
+            del(row) {
+                var that = this;
+                that.$confirm("确认删除该信息!", "提示", {
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    type: "warning"
+                }).then(() => {
+                    $.ajax({
+                        type: "GET",
+                        url: `${basePath}/app_schedule_task/deleteApp_schedule_task`,
+                        data: {id: row.id},
+                        success: function (data) {
+                            if (data.status == 0) {
+                                that.$message({
+                                    type: "success",
+                                    message: "删除成功"
+                                });
+                                that.handleCurrentChange(1);
+                            }
+                        }
+                    })
+                }).catch(() => {
+                    this.$message({
+                        type: "info",
+                        message: "已取消删除"
+                    });
+                });
+            },
+        }
+    })
+</script>
+</html>
+

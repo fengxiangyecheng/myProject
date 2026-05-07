@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
+    <title>个人数据统计</title>
+    <link href="../static/img/favicon.jpg" rel="shortcut icon">
+    <link href="../static/element-ui/lib/theme-chalk/index.css" rel="stylesheet">
+    <link href="../static/css/common.css" rel="stylesheet">
+    <script src="../static/js/vue.js"></script>
+    <script src="../static/element-ui/lib/index.js"></script>
+    <script src="../static/js/jquery-2.2.3.min.js"></script>
+    <style>
+        .stat-grid { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+        .stat-box {
+            flex: 1 1 160px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+            padding: 16px; text-align: center;
+        }
+        .stat-box .num { font-size: 22px; font-weight: 600; color: #0d9488; }
+        .stat-box .lbl { color: #64748b; font-size: 13px; margin-top: 6px; }
+    </style>
+</head>
+<body>
+<div id="statsApp" v-cloak style="padding:16px;">
+    <h3 style="margin:0 0 12px 0;">个人数据统计</h3>
+    <p style="color:#64748b;font-size:13px;">数据来自与您相关的日程任务。提醒达标率：在已标记「已完成」的任务中，完成时间不晚于截止时间（无截止时间计为达标）的比例。</p>
+    <div class="stat-grid">
+        <div class="stat-box"><div class="num">{{completionRate}}%</div><div class="lbl">日程完成率</div></div>
+        <div class="stat-box"><div class="num">{{scheduleDone}} / {{scheduleTotal}}</div><div class="lbl">已完成 / 总计</div></div>
+        <div class="stat-box"><div class="num">{{scheduleActive}}</div><div class="lbl">进行中</div></div>
+        <div class="stat-box"><div class="num">{{scheduleOverdue}}</div><div class="lbl">逾期</div></div>
+        <div class="stat-box"><div class="num">{{todoCount}}</div><div class="lbl">待办（未确认/已确认）</div></div>
+        <div class="stat-box"><div class="num">{{reminderOnTimeRate}}%</div><div class="lbl">提醒达标率（按时完成）</div></div>
+        <div class="stat-box"><div class="num">{{reminderOnTimeCount}} / {{reminderDoneTotal}}</div><div class="lbl">按时完成 / 已完成任务</div></div>
+    </div>
+    <el-card shadow="never">
+        <div slot="header">按类型分布</div>
+        <el-table :data="typeRows" size="small" v-if="typeRows.length">
+            <el-table-column prop="type_code" label="类型编码"></el-table-column>
+            <el-table-column prop="cnt" label="数量" width="100"></el-table-column>
+        </el-table>
+        <div v-else style="color:#94a3b8;">暂无类型数据（可在日程中填写 schedule_type_code 或维护日程类型字典）</div>
+    </el-card>
+</div>
+</body>
+<script th:inline="javascript">
+    var basePath = "/" + window.location.pathname.split("/")[1];
+    new Vue({
+        el: "#statsApp",
+        data() {
+            return {
+                completionRate: 0,
+                scheduleTotal: 0,
+                scheduleDone: 0,
+                scheduleActive: 0,
+                scheduleOverdue: 0,
+                todoCount: 0,
+                typeRows: [],
+                reminderOnTimeRate: 0,
+                reminderDoneTotal: 0,
+                reminderOnTimeCount: 0,
+            }
+        },
+        mounted() {
+            this.load();
+        },
+        methods: {
+            load() {
+                var u = JSON.parse(localStorage.getItem("userInfo") || "{}");
+                var uid = u.id != null && u.id !== '' ? u.id : (u.ID != null ? u.ID : '');
+                if (!uid) {
+                    this.$message.warning('未登录');
+                    return;
+                }
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: basePath + "/app_schedule_task/queryDashboardData",
+                    data: {user_id: uid},
+                    success: function (res) {
+                        if (res.status !== 0 || !res.data) return;
+                        var d = res.data;
+                        that.completionRate = d.completionRate != null ? Number(d.completionRate) : 0;
+                        that.scheduleTotal = Number(d.scheduleTotal) || 0;
+                        that.scheduleDone = Number(d.scheduleDone) || 0;
+                        that.scheduleActive = Number(d.scheduleActive) || 0;
+                        that.scheduleOverdue = Number(d.scheduleOverdue) || 0;
+                        that.todoCount = Number(d.todoCount) || 0;
+                        that.typeRows = d.typeBreakdown || [];
+                        that.reminderOnTimeRate = d.reminderOnTimeRate != null ? Number(d.reminderOnTimeRate) : 0;
+                        that.reminderDoneTotal = Number(d.reminderDoneTotal) || 0;
+                        that.reminderOnTimeCount = Number(d.reminderOnTimeCount) || 0;
+                    }
+                });
+            }
+        }
+    })
+</script>
+</html>

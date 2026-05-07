@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.testdemo.mapper.App_team_userMapper">
+<sql id="Base_Column_List">
+su.id id,
+su.team_id team_id,
+su.user_id user_id,
+su.join_type join_type,
+su.status status,
+su.team_role team_role,
+su.join_time join_time
+</sql>
+<!--在数据不存在的情况下进行添加-->
+<insert id="addApp_team_user" parameterType="pd">
+insert into app_team_user (
+team_id,
+user_id,
+join_type,
+status,
+team_role,
+join_time
+ ) values (
+#{team_id},
+#{user_id},
+#{join_type},
+#{status},
+IFNULL(#{team_role},'1'),
+#{join_time}
+) </insert>
+<!--根据id删除数据-->
+<delete id="deleteApp_team_userId" parameterType="pd"  >
+DELETE FROM  app_team_user WHERE id = #{id};
+</delete>
+<!--根据id更新数据-->
+<update id="updateApp_team_user" parameterType="pd"  >
+UPDATE app_team_user  <set>
+
+<if test="team_id != null and team_id !=''"> team_id = #{team_id}, </if>
+<if test="user_id != null and user_id !=''"> user_id = #{user_id}, </if>
+<if test="join_type != null and join_type !=''"> join_type = #{join_type}, </if>
+<if test="status != null and status !=''"> status = #{status}, </if>
+<if test="team_role != null and team_role !=''"> team_role = #{team_role}, </if>
+<if test="join_time != null and join_time !=''"> join_time = #{join_time}, </if>
+</set>
+ WHERE id = #{id}; </update>
+<!--获取数据 不分页-->
+<select id="queryApp_team_userKey" parameterType="pd" resultType="pd" useCache="false">
+SELECT <include refid="Base_Column_List"/> 
+<!--向左关联查询返回对应字段-->
+,team_id.id as team_id_id1 
+,team_id.team_name as team_id_team_name1 
+,team_id.creator_id as team_id_creator_id1 
+,team_id.admin_id as team_id_admin_id1 
+,team_id.description as team_id_description1 
+,team_id.status as team_id_status1 
+,team_id.create_time as team_id_create_time1 
+,team_id.update_time as team_id_update_time1 
+,su.user_id as user_id_id1
+,COALESCE(NULLIF(TRIM(IFNULL(app_u.nickname,'')),''), app_u.username, sys_u.NAME, sys_u.USERNAME, CONCAT('用户ID:', CAST(su.user_id AS CHAR))) as user_id_team_name1
+,COALESCE(app_u.username, sys_u.USERNAME) as user_id_username1
+,sys_u.role_manage_id as user_id_role_manage_id1
+,IFNULL(app_u.account_status,'1') as user_id_status1
+,sys_u.create_time as user_id_create_time1
+,sys_u.update_time as user_id_update_time1
+FROM app_team_user su
+left join app_team team_id on team_id.id=su.team_id
+left join app_user app_u on CAST(app_u.id AS CHAR)=TRIM(CAST(IFNULL(su.user_id,'') AS CHAR))
+left join sys_user sys_u on CAST(sys_u.id AS CHAR)=TRIM(CAST(IFNULL(su.user_id,'') AS CHAR))
+where 1 = 1
+ <if test="id != null and id != '' "> and su.id = #{id}  </if>
+ <if test="team_id != null and team_id != '' "> and su.team_id = #{team_id}  </if>
+ <if test="user_id != null and user_id != '' "> and su.user_id = #{user_id}  </if>
+ <if test="join_type != null and join_type != '' "> and su.join_type = #{join_type}  </if>
+ <if test="status != null and status != '' "> and su.status = #{status}  </if>
+ <if test="team_role != null and team_role != '' "> and su.team_role = #{team_role}  </if>
+ <if test="join_time != null and join_time != '' "> and su.join_time = #{join_time}  </if>
+ <if test="login_user_id != null and login_user_id != '' and (role_manage_id == null or role_manage_id == '' or role_manage_id != '1')">
+ and (
+     CAST(su.user_id AS CHAR)=CAST(#{login_user_id} AS CHAR)
+     or CAST(su.team_id AS CHAR) in (
+        SELECT CAST(t.id AS CHAR) FROM app_team t
+        WHERE CAST(t.admin_id AS CHAR)=CAST(#{login_user_id} AS CHAR) OR CAST(t.creator_id AS CHAR)=CAST(#{login_user_id} AS CHAR)
+     )
+     or CAST(su.team_id AS CHAR) in (
+        SELECT CAST(tu.team_id AS CHAR) FROM app_team_user tu
+        WHERE CAST(tu.user_id AS CHAR)=CAST(#{login_user_id} AS CHAR) AND CAST(IFNULL(tu.status,'') AS CHAR)='1'
+     )
+ )
+ </if>
+</select>
+<!--获取用户列表数据 分页-->
+<select id="queryPageApp_team_userKeyList" parameterType="page" resultType="pd" useCache="false">
+SELECT <include refid="Base_Column_List"/> 
+<!--向左关联查询返回对应字段-->
+,team_id.id as team_id_id1 
+,team_id.team_name as team_id_team_name1 
+,team_id.creator_id as team_id_creator_id1 
+,team_id.admin_id as team_id_admin_id1 
+,team_id.description as team_id_description1 
+,team_id.status as team_id_status1 
+,team_id.create_time as team_id_create_time1 
+,team_id.update_time as team_id_update_time1 
+,su.user_id as user_id_id1
+,COALESCE(NULLIF(TRIM(IFNULL(app_u.nickname,'')),''), app_u.username, sys_u.NAME, sys_u.USERNAME, CONCAT('用户ID:', CAST(su.user_id AS CHAR))) as user_id_team_name1
+,COALESCE(app_u.username, sys_u.USERNAME) as user_id_username1
+,sys_u.role_manage_id as user_id_role_manage_id1
+,IFNULL(app_u.account_status,'1') as user_id_status1
+,sys_u.create_time as user_id_create_time1
+,sys_u.update_time as user_id_update_time1
+FROM app_team_user su
+left join app_team team_id on team_id.id=su.team_id
+left join app_user app_u on CAST(app_u.id AS CHAR)=TRIM(CAST(IFNULL(su.user_id,'') AS CHAR))
+left join sys_user sys_u on CAST(sys_u.id AS CHAR)=TRIM(CAST(IFNULL(su.user_id,'') AS CHAR))
+where 1 = 1
+ <if test="pd.id != null and pd.id !=''"> and su.id = #{pd.id}  </if>
+ <if test="pd.team_id != null and pd.team_id !=''"> and su.team_id = #{pd.team_id}  </if>
+ <if test="pd.user_id != null and pd.user_id !=''"> and su.user_id = #{pd.user_id}  </if>
+ <if test="pd.join_type != null and pd.join_type !=''"> and su.join_type = #{pd.join_type}  </if>
+ <if test="pd.status != null and pd.status !=''"> and su.status = #{pd.status}  </if>
+ <if test="pd.team_role != null and pd.team_role !=''"> and su.team_role = #{pd.team_role}  </if>
+ <if test="pd.join_time != null and pd.join_time !=''"> and su.join_time = #{pd.join_time}  </if>
+ <if test="pd.login_user_id != null and pd.login_user_id != '' and (pd.role_manage_id == null or pd.role_manage_id == '' or pd.role_manage_id != '1')">
+ and (
+     CAST(su.user_id AS CHAR)=CAST(#{pd.login_user_id} AS CHAR)
+     or CAST(su.team_id AS CHAR) in (
+        SELECT CAST(t.id AS CHAR) FROM app_team t
+        WHERE CAST(t.admin_id AS CHAR)=CAST(#{pd.login_user_id} AS CHAR) OR CAST(t.creator_id AS CHAR)=CAST(#{pd.login_user_id} AS CHAR)
+     )
+     or CAST(su.team_id AS CHAR) in (
+        SELECT CAST(tu.team_id AS CHAR) FROM app_team_user tu
+        WHERE CAST(tu.user_id AS CHAR)=CAST(#{pd.login_user_id} AS CHAR) AND CAST(IFNULL(tu.status,'') AS CHAR)='1'
+     )
+ )
+ </if>
+</select>
+</mapper>

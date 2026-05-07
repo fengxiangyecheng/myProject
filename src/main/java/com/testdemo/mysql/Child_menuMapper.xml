@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.testdemo.mapper.Child_menuMapper">
+<sql id="Base_Column_List">
+su.id id,
+su.name name,
+su.menu_icon menu_icon,
+su.menu_href menu_href,
+su.index_page index_page,
+su.menu_id menu_id,
+su.create_time create_time
+</sql>
+<!--在数据不存在的情况下进行添加-->
+<insert id="addChild_menu" parameterType="pd">
+insert into child_menu (
+name,
+menu_icon,
+menu_href,
+index_page,
+menu_id,
+create_time
+ ) values (
+#{name},
+#{menu_icon},
+#{menu_href},
+#{index_page},
+#{menu_id},
+now()
+) </insert>
+<!--根据id删除数据-->
+<delete id="deleteChild_menuId" parameterType="pd"  >
+DELETE FROM  child_menu WHERE id = #{id};
+</delete>
+<!--根据id更新数据-->
+<update id="updateChild_menu" parameterType="pd"  >
+UPDATE child_menu  <set>
+
+<if test="name != null and name !=''"> name = #{name}, </if>
+<if test="menu_icon != null and menu_icon !=''"> menu_icon = #{menu_icon}, </if>
+<if test="menu_href != null and menu_href !=''"> menu_href = #{menu_href}, </if>
+<if test="index_page != null and index_page !=''"> index_page = #{index_page}, </if>
+<if test="menu_id != null and menu_id !=''"> menu_id = #{menu_id}, </if>
+
+</set>
+ WHERE id = #{id}; </update>
+<!--获取数据 不分页-->
+<select id="queryChild_menuKey" parameterType="pd" resultType="pd" useCache="false">
+SELECT <include refid="Base_Column_List"/> 
+<!--向左关联查询返回对应字段-->
+,menu.id as menu_id1 
+,menu.name as menu_name1 
+,menu.menu_icon as menu_menu_icon1 
+,menu.index_page as menu_index_page1 
+,menu.create_time as menu_create_time1 
+FROM child_menu su
+<!--向左关联查询-->
+left join menu menu on menu.id=su.menu_id
+where 1 = 1
+ <if test="id != null and id != '' "> and su.id = #{id}  </if>
+ <if test="name != null and name != '' "> and su.name = #{name}  </if>
+ <if test="menu_icon != null and menu_icon != '' "> and su.menu_icon = #{menu_icon}  </if>
+ <if test="menu_href != null and menu_href != '' "> and su.menu_href = #{menu_href}  </if>
+ <if test="index_page != null and index_page != '' "> and su.index_page = #{index_page}  </if>
+ <if test="menu_id != null and menu_id != '' "> and su.menu_id = #{menu_id}  </if>
+ <if test="create_time != null and create_time != '' "> and su.create_time = #{create_time}  </if>
+</select>
+<!--获取用户列表数据 分页-->
+<select id="queryPageChild_menuKeyList" parameterType="page" resultType="pd" useCache="false">
+SELECT <include refid="Base_Column_List"/> 
+<!--向左关联查询返回对应字段-->
+,menu_id.id as menu_id_id1 
+,menu_id.name as menu_id_name1 
+,menu_id.menu_icon as menu_id_menu_icon1 
+,menu_id.index_page as menu_id_index_page1 
+,menu_id.create_time as menu_id_create_time1 
+FROM child_menu su
+<!--向左关联查询-->
+left join menu menu_id on menu_id.id=su.menu_id
+where 1 = 1
+ <if test="pd.id != null and pd.id !=''"> and su.id = #{pd.id}  </if>
+ <if test="pd.name != null and pd.name !=''"> and su.name = #{pd.name}  </if>
+ <if test="pd.menu_icon != null and pd.menu_icon !=''"> and su.menu_icon = #{pd.menu_icon}  </if>
+ <if test="pd.menu_href != null and pd.menu_href !=''"> and su.menu_href = #{pd.menu_href}  </if>
+ <if test="pd.index_page != null and pd.index_page !=''"> and su.index_page = #{pd.index_page}  </if>
+ <if test="pd.menu_id != null and pd.menu_id !=''"> and su.menu_id = #{pd.menu_id}  </if>
+ <if test="pd.create_time != null and pd.create_time !=''"> and su.create_time = #{pd.create_time}  </if>
+</select>
+</mapper>

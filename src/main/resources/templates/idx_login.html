@@ -1,0 +1,282 @@
+<!--<!DOCTYPE html>-->
+
+<!--<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">-->
+
+<!--  -->
+<!--  <meta http-equiv="X-UA-Compatible" content="IE=edge">-->
+<!--  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">-->
+<!--  <meta name="description" content="">-->
+<!--  <meta name="author" content="">-->
+
+<!--  <title>登录</title>-->
+
+<!--  <link rel="stylesheet" href="static/element-ui/lib/theme-chalk/index.css">-->
+<!--  <link href="static/css/idx_login.css" rel="stylesheet">-->
+
+<!--</head>-->
+
+<!--<body class="bg-gradient-primary">-->
+
+<!--  <div class="container">-->
+
+<!--    &lt;!&ndash; Outer Row &ndash;&gt;-->
+<!--    <div class="row justify-content-center">-->
+
+<!--      <div class="col-xl-10 col-lg-12 col-md-9">-->
+
+<!--        <div class="card o-hidden border-0 shadow-lg my-5">-->
+<!--          <div class="card-body p-0">-->
+<!--            &lt;!&ndash; Nested Row within Card Body &ndash;&gt;-->
+<!--            <div class="row">-->
+<!--              <div class="col-lg-6 d-none d-lg-block bg-login-image"></div>-->
+<!--              <div class="col-lg-6">-->
+<!--                <div class="p-5">-->
+<!--                  <div class="text-center">-->
+<!--                    <h1 class="h4 text-gray-900 mb-4">日程管理系统</h1>-->
+<!--                  </div>-->
+<!--                  <div class="user"  id="loginApp">-->
+<!--                    <div class="form-group">-->
+<!--                      <input type="text" class="form-control form-control-user" id="login_account" name="login_login_account" placeholder="请输入账号">-->
+<!--                    </div>-->
+<!--                    <div class="form-group">-->
+<!--                      <input type="password" class="form-control form-control-user" id="login_pwd" name="login_pwd" placeholder="请输入密码">-->
+<!--                    </div>-->
+<!--                    <div class="form-group">-->
+<!--                      <div class="custom-control custom-checkbox small">-->
+<!--                        <input type="checkbox" class="custom-control-input" id="customCheck">-->
+<!--                        <label class="custom-control-label" for="customCheck">Remember Me</label>-->
+<!--                      </div>-->
+<!--                    </div>-->
+<!--                    <font color="red"></font>-->
+<!--                     <button type="" class="btn btn-primary btn-user btn-block" id="loginsubmit"  @click="login">登录</button>-->
+<!--                    <hr>-->
+<!--                  </div>-->
+<!--                </div>-->
+<!--              </div>-->
+<!--            </div>-->
+<!--          </div>-->
+<!--        </div>-->
+<!--      </div>-->
+<!--    </div>-->
+<!--  </div>-->
+
+<!--  <script src="static/js/vue.js"></script>-->
+<!--  <script src="static/element-ui/lib/index.js"></script>-->
+<!--  <script src="static/js/jquery-2.2.3.min.js"></script>-->
+
+
+<!--  <script>-->
+<!--    var basePath = "/" + window.location.pathname.split("/")[1];-->
+<!--    var loginApp = new Vue({-->
+<!--      el: "#loginApp",-->
+<!--      data() {-->
+<!--        return {-->
+
+<!--        }-->
+<!--      },-->
+<!--      mounted() {-->
+<!--      },-->
+<!--      methods: {-->
+<!--        login() {-->
+<!--          console.log(this.fullscreenLoading);-->
+<!--          var user = $("#login_account").val();-->
+<!--          var password = $("#login_pwd").val();-->
+<!--          if (user == '' || password == '') {-->
+<!--            return this.$message.error('请输入账号或密码！');-->
+<!--          }-->
+<!--          this.fullscreenLoading = true;-->
+<!--          let that = this;-->
+<!--          $.ajax({-->
+<!--            type: "get",-->
+<!--            url: basePath + "/loginPost",-->
+<!--            async: false,-->
+<!--            data: {"USERNAME": user, "PASSWORD": password},-->
+<!--            success: function (data) {-->
+
+<!--              if (data.msg=='200') {-->
+<!--                that.fullscreenLoading = false;-->
+<!--                console.log(data.data)-->
+<!--                var obj = JSON.stringify(data.data);-->
+<!--                localStorage.setItem('userInfo', obj);-->
+<!--                window.location.href = basePath + "/idx_index";-->
+<!--              } else {-->
+<!--                that.flag = false;-->
+<!--                that.fullscreenLoading = false;-->
+<!--                that.$alert('<strong style="color:red;">账号或密码错误，请重新输入</strong>', '警告', {-->
+<!--                  dangerouslyUseHTMLString: true-->
+<!--                });-->
+<!--              }-->
+<!--            },-->
+<!--            error: function () {-->
+<!--              that.flag = false;-->
+<!--              that.fullscreenLoading = false;-->
+<!--              that.$confirm('登录错误，请重试?', '提示', {-->
+<!--                confirmButtonText: '确定',-->
+<!--                cancelButtonText: '取消',-->
+<!--                type: 'warning'-->
+<!--              }).then(() => {-->
+<!--              }).catch(() => {-->
+<!--              });-->
+<!--            }-->
+<!--          });-->
+<!--        },-->
+<!--      }-->
+<!--    })-->
+<!--  </script>-->
+<!--</body></html>-->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="">
+  <meta name="author" content="">
+  <title>登录 - 日程管理系统</title>
+  <link rel="stylesheet" href="static/element-ui/lib/theme-chalk/index.css">
+  <link href="static/css/idx_login.css" rel="stylesheet">
+</head>
+
+<body>
+<div class="login-container">
+  <div class="login-box">
+    <div class="login-header">
+      <div class="logo-icon">
+        <i class="el-icon-s-management"></i>
+      </div>
+      <h2 class="login-title">日程管理系统</h2>
+      <p class="login-subtitle">欢迎回来，请登录您的账号</p>
+    </div>
+
+    <div class="login-form" id="loginApp">
+      <div class="form-item">
+        <i class="el-icon-user form-icon"></i>
+        <input
+                type="text"
+                class="form-input"
+                id="login_account"
+                name="login_login_account"
+                placeholder="请输入账号"
+                autocomplete="username"
+        >
+      </div>
+
+      <div class="form-item">
+        <i class="el-icon-lock form-icon"></i>
+        <input
+                type="password"
+                class="form-input"
+                id="login_pwd"
+                name="login_pwd"
+                placeholder="请输入密码"
+                autocomplete="current-password"
+        >
+      </div>
+
+      <div class="form-options">
+        <label class="remember-me">
+          <input type="checkbox" id="customCheck">
+          <span>记住我</span>
+        </label>
+        <a href="javascript:void(0)" class="forgot-password">忘记密码？</a>
+      </div>
+
+      <font color="red"></font>
+
+      <button type="button" class="login-btn" id="loginsubmit" @click="login">
+        <span v-if="!fullscreenLoading">登 录</span>
+        <i v-else class="el-icon-loading"></i>
+      </button>
+    </div>
+
+    <div class="login-footer">
+      <p>© 2026 日程管理系统. All Rights Reserved.</p>
+    </div>
+  </div>
+
+  <div class="login-decoration">
+    <div class="decoration-circle circle-1"></div>
+    <div class="decoration-circle circle-2"></div>
+    <div class="decoration-circle circle-3"></div>
+  </div>
+</div>
+
+<script src="static/js/vue.js"></script>
+<script src="static/element-ui/lib/index.js"></script>
+<script src="static/js/jquery-2.2.3.min.js"></script>
+
+<script>
+  var basePath = "/" + window.location.pathname.split("/")[1];
+  var loginApp = new Vue({
+    el: "#loginApp",
+    data() {
+      return {
+        fullscreenLoading: false
+      }
+    },
+    mounted() {
+    },
+    methods: {
+      login() {
+        console.log(this.fullscreenLoading);
+        var user = $("#login_account").val();
+        var password = $("#login_pwd").val();
+        if (user == '' || password == '') {
+          return this.$message.error('请输入账号或密码！');
+        }
+        this.fullscreenLoading = true;
+        let that = this;
+        $.ajax({
+          type: "get",
+          url: basePath + "/loginPost",
+          async: false,
+          data: {"USERNAME": user, "PASSWORD": password},
+          success: function (data) {
+            if (data.msg=='200') {
+              that.fullscreenLoading = false;
+              if (data.data && typeof data.data === 'object') {
+                var obj = JSON.stringify(data.data);
+                localStorage.setItem('userInfo', obj);
+                window.location.href = basePath + "/idx_index";
+              } else {
+                // 兼容“已登录”分支无 data 的场景，避免把 undefined 写入 localStorage 导致首页菜单空白
+                that.$alert('<strong style="color:#e6a23c;">登录状态已变化，请重试登录</strong>', '提示', {
+                  dangerouslyUseHTMLString: true
+                }).then(function () {
+                  localStorage.removeItem('userInfo');
+                  window.location.href = basePath + "/idx_login";
+                });
+              }
+            } else if (data.msg=='503') {
+              that.fullscreenLoading = false;
+              that.$alert('<strong style="color:#e6a23c;">' + (data.result || '账号已被禁用') + '</strong>', '提示', {
+                dangerouslyUseHTMLString: true
+              });
+            } else {
+              that.flag = false;
+              that.fullscreenLoading = false;
+              that.$alert('<strong style="color:red;">账号或密码错误，请重新输入</strong>', '警告', {
+                dangerouslyUseHTMLString: true
+              });
+            }
+          },
+          error: function () {
+            that.flag = false;
+            that.fullscreenLoading = false;
+            that.$confirm('登录错误，请重试?', '提示', {
+              confirmButtonText: '确定',
+              cancelButtonText: '取消',
+              type: 'warning'
+            }).then(() => {
+            }).catch(() => {
+            });
+          }
+        });
+      },
+    }
+  })
+</script>
+</body>
+</html>

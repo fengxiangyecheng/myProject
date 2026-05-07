@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.testdemo.mapper.App_task_progressMapper">
+<sql id="Base_Column_List">
+su.id id,
+su.task_id task_id,
+su.user_id user_id,
+su.progress progress,
+su.content content,
+su.submit_time submit_time
+</sql>
+<!--在数据不存在的情况下进行添加-->
+<insert id="addApp_task_progress" parameterType="pd">
+insert into app_task_progress (
+task_id,
+user_id,
+progress,
+content,
+submit_time
+ ) values (
+#{task_id},
+#{user_id},
+#{progress},
+#{content},
+#{submit_time}
+) </insert>
+<!--根据id删除数据-->
+<delete id="deleteApp_task_progressId" parameterType="pd"  >
+DELETE FROM  app_task_progress WHERE id = #{id};
+</delete>
+<!--根据id更新数据-->
+<update id="updateApp_task_progress" parameterType="pd"  >
+UPDATE app_task_progress  <set>
+
+<if test="task_id != null and task_id !=''"> task_id = #{task_id}, </if>
+<if test="user_id != null and user_id !=''"> user_id = #{user_id}, </if>
+<if test="progress != null and progress !=''"> progress = #{progress}, </if>
+<if test="content != null and content !=''"> content = #{content}, </if>
+<if test="submit_time != null and submit_time !=''"> submit_time = #{submit_time}, </if>
+</set>
+ WHERE id = #{id}; </update>
+<!--获取数据 不分页-->
+<select id="queryApp_task_progressKey" parameterType="pd" resultType="pd" useCache="false">
+SELECT <include refid="Base_Column_List"/> 
+<!--向左关联查询返回对应字段-->
+,su.user_id as user_id_id1
+,COALESCE(app_user.nickname,app_user.username,sys_user.NAME,sys_user.USERNAME,CONCAT('用户#',CAST(su.user_id AS CHAR))) as user_id_USERNAME1 
+,sys_user.PASSWORD as user_id_PASSWORD1 
+,sys_user.NAME as user_id_NAME1 
+,sys_user.role_manage_id as user_id_role_manage_id1 
+,sys_user.create_time as user_id_create_time1 
+,sys_user.update_time as user_id_update_time1 
+,sys_user.signature as user_id_signature1 
+,task_id.task_name as task_id_task_name1
+,task_id.assigner_id as task_id_assigner_id1
+,task_id.assignee_id as task_id_assignee_id1
+,CASE CAST(IFNULL(su.progress,'') AS CHAR)
+  WHEN '0' THEN '未开始'
+  WHEN '1' THEN '进行中'
+  WHEN '2' THEN '已完成'
+  ELSE su.progress
+ END as progress_name1
+FROM app_task_progress su
+<!--向左关联查询-->
+left join sys_user sys_user on CAST(sys_user.id AS CHAR)=CAST(su.user_id AS CHAR)
+left join app_user app_user on CAST(app_user.id AS CHAR)=CAST(su.user_id AS CHAR)
+left join app_schedule_task task_id on CAST(task_id.id AS CHAR)=CAST(su.task_id AS CHAR)
+where 1 = 1
+ <if test="id != null and id != '' "> and su.id = #{id}  </if>
+ <if test="task_id != null and task_id != '' "> and su.task_id = #{task_id}  </if>
+ <if test="user_id != null and user_id != '' "> and su.user_id = #{user_id}  </if>
+ <if test="progress != null and progress != '' "> and su.progress = #{progress}  </if>
+ <if test="content != null and content != '' "> and su.content = #{content}  </if>
+ <if test="submit_time != null and submit_time != '' "> and su.submit_time = #{submit_time}  </if>
+ <if test="login_user_id != null and login_user_id != '' and (role_manage_id == null or role_manage_id == '' or role_manage_id != '1')">
+ and (
+   CAST(su.user_id AS CHAR)=CAST(#{login_user_id} AS CHAR)
+   or CAST(task_id.assignee_id AS CHAR)=CAST(#{login_user_id} AS CHAR)
+   or CAST(task_id.assigner_id AS CHAR)=CAST(#{login_user_id} AS CHAR)
+ )
+ </if>
+</select>
+<!--获取用户列表数据 分页-->
+<select id="queryPageApp_task_progressKeyList" parameterType="page" resultType="pd" useCache="false">
+SELECT <include refid="Base_Column_List"/> 
+<!--向左关联查询返回对应字段-->
+,su.user_id as user_id_id1
+,COALESCE(app_user.nickname,app_user.username,sys_user.NAME,sys_user.USERNAME,CONCAT('用户#',CAST(su.user_id AS CHAR))) as user_id_USERNAME1 
+,sys_user.PASSWORD as user_id_PASSWORD1 
+,sys_user.NAME as user_id_NAME1 
+,sys_user.role_manage_id as user_id_role_manage_id1 
+,sys_user.create_time as user_id_create_time1 
+,sys_user.update_time as user_id_update_time1 
+,sys_user.signature as user_id_signature1 
+,task_id.task_name as task_id_task_name1
+,task_id.assigner_id as task_id_assigner_id1
+,task_id.assignee_id as task_id_assignee_id1
+,CASE CAST(IFNULL(su.progress,'') AS CHAR)
+  WHEN '0' THEN '未开始'
+  WHEN '1' THEN '进行中'
+  WHEN '2' THEN '已完成'
+  ELSE su.progress
+ END as progress_name1
+FROM app_task_progress su
+<!--向左关联查询-->
+left join sys_user sys_user on CAST(sys_user.id AS CHAR)=CAST(su.user_id AS CHAR)
+left join app_user app_user on CAST(app_user.id AS CHAR)=CAST(su.user_id AS CHAR)
+left join app_schedule_task task_id on CAST(task_id.id AS CHAR)=CAST(su.task_id AS CHAR)
+where 1 = 1
+ <if test="pd.id != null and pd.id !=''"> and su.id = #{pd.id}  </if>
+ <if test="pd.task_id != null and pd.task_id !=''"> and su.task_id = #{pd.task_id}  </if>
+ <if test="pd.user_id != null and pd.user_id !=''"> and su.user_id = #{pd.user_id}  </if>
+ <if test="pd.progress != null and pd.progress !=''"> and su.progress = #{pd.progress}  </if>
+ <if test="pd.content != null and pd.content !=''"> and su.content = #{pd.content}  </if>
+ <if test="pd.submit_time != null and pd.submit_time !=''"> and su.submit_time = #{pd.submit_time}  </if>
+ <if test="pd.login_user_id != null and pd.login_user_id != '' and (pd.role_manage_id == null or pd.role_manage_id == '' or pd.role_manage_id != '1')">
+ and (
+   CAST(su.user_id AS CHAR)=CAST(#{pd.login_user_id} AS CHAR)
+   or CAST(task_id.assignee_id AS CHAR)=CAST(#{pd.login_user_id} AS CHAR)
+   or CAST(task_id.assigner_id AS CHAR)=CAST(#{pd.login_user_id} AS CHAR)
+ )
+ </if>
+</select>
+</mapper>

@@ -1,0 +1,614 @@
+<!--<!DOCTYPE html>-->
+<!--<html>-->
+<!--<head>-->
+<!--    <meta charset="utf-8"/>-->
+<!--    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>-->
+<!--    <title>后台管理系统</title>-->
+<!--    <link rel="stylesheet" href="static/element-ui/lib/theme-chalk/index.css">-->
+<!--    <link rel="stylesheet" href="static/css/idx_index.css">-->
+<!--</head>-->
+<!--<body>-->
+<!--<div id="indexApp">-->
+<!--    <div class="conItem">-->
+<!--        <div class="conLeft">-->
+<!--            <div class="conTop">日程管理系统</div>-->
+<!--            <el-menu :default-active="activeIndex" class="el-menu-vertical-demo" @select="handleSelect" @open="handleOpen"-->
+<!--                     background-color="#ffffff" text-color="#999999" active-text-color="#2E8B57" :unique-opened="true"-->
+<!--                     style="background-color: #ffffff;height: calc(100% - 40px);border-radius: 10px;margin-top: 15px;">-->
+<!--                <el-menu-item index="9999" @click="toRouter('主页','wel_index')" style="border-radius: 10px;">-->
+<!--                    <i class="el-icon-s-home"></i>-->
+<!--                    <span slot="title">主页</span>-->
+<!--                </el-menu-item>-->
+<!--                <el-submenu :index="item.id" v-for="(item,index) in menuList">-->
+<!--                    <template slot="title">-->
+<!--                        <i :class="item.icon"></i>-->
+<!--                        <span>{{item.name}}</span>-->
+<!--                    </template>-->
+<!--                    <el-menu-item :index="item.id+'-'+em.id" v-for="(em,idx) in item.list" @click="toRouter(em.child_menu_name1,em.child_menu_menu_href1,em.id)">-->
+<!--                        <template slot="title">-->
+<!--                            <i :class="em.child_menu_menu_icon1"></i>-->
+<!--                            <span>{{em.child_menu_name1}}</span>-->
+<!--                        </template>-->
+<!--                    </el-menu-item>-->
+<!--                </el-submenu>-->
+<!--            </el-menu>-->
+<!--        </div>-->
+<!--        <div class="conRight">-->
+<!--            <div class="conTopRight">-->
+<!--                <div style="flex-grow: 1;">当前位置：{{curMenuName}}</div>-->
+<!--                <div>你好，{{userObj.NAME}}</div>-->
+<!--                <i class="el-icon-error" @click="loginOut();" style="cursor: pointer;margin-left: 15px;">退出</i>-->
+<!--            </div>-->
+<!--            <div v-if="activeIndex==9999" class="conIframe" style="background: url(static/img/indeximg.jpg) no-repeat center center;background-size:cover;">-->
+<!--                <h1>欢迎您使用后台日程管理系统</h1>-->
+<!--            </div>-->
+<!--            <iframe v-else :src="acticeIframeUrl" :id="acticeIframeUrl" frameborder="0" width="98%" min-width="100%"-->
+<!--                    scrolling="auto" class="conIframe"></iframe>-->
+<!--        </div>-->
+<!--    </div>-->
+<!--</div>-->
+<!--</body>-->
+<!--&lt;!&ndash; 全局js &ndash;&gt;-->
+<!--<script src="static/js/vue.js"></script>-->
+<!--<script src="static/element-ui/lib/index.js"></script>-->
+<!--<script src="static/js/jquery-2.2.3.min.js"></script>-->
+<!--<script>-->
+<!--    var basePath = "/" + window.location.pathname.split("/")[1];-->
+<!--    var indexApp = new Vue({-->
+<!--        el: "#indexApp",-->
+<!--        data() {-->
+<!--            return {-->
+<!--                curMenuName:'主页',-->
+<!--                activeIndex: "9999",-->
+<!--                acticeIframeUrl: "",-->
+<!--                userObj: {},-->
+<!--                isFullScreenFlag: false,-->
+<!--                noticeList: [],-->
+<!--                menuList: [],-->
+<!--            }-->
+<!--        },-->
+<!--        created() {-->
+<!--            this.userObj = JSON.parse(localStorage.getItem("userInfo"));-->
+<!--            this.getMenuList(this.userObj.role_manage_id);-->
+<!--        },-->
+<!--        mounted() {-->
+<!--        },-->
+<!--        methods: {-->
+<!--            getMenuList(role_manage_id) {-->
+<!--                let that = this;-->
+<!--                $.ajax({-->
+<!--                    type: "GET",-->
+<!--                    url: `${basePath}/permission_menu/queryPermission_menuKey1`,-->
+<!--                    data: {role_manage_id},-->
+<!--                    success: function (data) {-->
+<!--                        that.menuList=data.data;-->
+<!--                    }-->
+<!--                })-->
+<!--            },-->
+<!--            handleOpen(id){-->
+<!--                console.log(id);-->
+<!--                let that = this;-->
+<!--                $.ajax({-->
+<!--                    type: "GET",-->
+<!--                    url: `${basePath}/child_menu/queryChild_menuKey`,-->
+<!--                    data: {menu_id:id},-->
+<!--                    success: function (data) {-->
+<!--                        that.childMenuList=data.data;-->
+<!--                    }-->
+<!--                })-->
+<!--            },-->
+<!--            handleSelect(key, keyPath) {-->
+<!--                console.log(key);-->
+<!--                this.activeIndex = key;-->
+<!--            },-->
+<!--            loginOut() {-->
+<!--                var that = this;-->
+<!--                $.ajax({-->
+<!--                    type: "GET",-->
+<!--                    url: `${basePath}/logout`,-->
+<!--                    data: {},-->
+<!--                    success: function (data) {-->
+<!--                        window.location.href = basePath + "/idx_login";-->
+<!--                        localStorage.removeItem("userInfo")-->
+<!--                    }-->
+<!--                })-->
+<!--            },-->
+<!--            fullScreen() {-->
+<!--                this.isFullScreenFlag = true;-->
+<!--                var docElm = document.documentElement;-->
+<!--                //W3C-->
+<!--                if (docElm.requestFullscreen) {-->
+<!--                    docElm.requestFullscreen();-->
+<!--                }-->
+<!--                //FireFox-->
+<!--                else if (docElm.mozRequestFullScreen) {-->
+<!--                    docElm.mozRequestFullScreen();-->
+<!--                }-->
+<!--                //Chrome等-->
+<!--                else if (docElm.webkitRequestFullScreen) {-->
+<!--                    docElm.webkitRequestFullScreen();-->
+<!--                }-->
+<!--                //IE11-->
+<!--                else if (elem.msRequestFullscreen) {-->
+<!--                    elem.msRequestFullscreen();-->
+<!--                }-->
+<!--            },-->
+<!--            miniScreen() {-->
+<!--                this.isFullScreenFlag = false;-->
+<!--                var el = document;-->
+<!--                var cfs = el.cancelFullScreen || el.webkitCancelFullScreen || el.mozCancelFullScreen || el.exitFullScreen;-->
+<!--                if (typeof cfs != "undefined" && cfs) {-->
+<!--                    cfs.call(el);-->
+<!--                } else if (typeof window.ActiveXObject != "undefined") {-->
+<!--                    //for IE，这里和fullScreen相同，模拟按下F11键退出全屏-->
+<!--                    var wscript = new ActiveXObject("WScript.Shell");-->
+<!--                    if (wscript != null) {-->
+<!--                        wscript.SendKeys("{F11}");-->
+<!--                    }-->
+<!--                }-->
+<!--            },-->
+<!--            toRouter(name,src, child_menu_id) {-->
+<!--                if (src == 'wel_index') {-->
+<!--                    this.curMenuName = '主页'-->
+<!--                } else {-->
+<!--                    this.curMenuName = name;-->
+<!--                    this.acticeIframeUrl = src+'?child_menu_id='+child_menu_id;-->
+<!--                }-->
+<!--            }-->
+<!--        }-->
+<!--    })-->
+<!--</script>-->
+<!--</html>-->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>后台管理系统</title>
+    <link rel="stylesheet" href="static/element-ui/lib/theme-chalk/index.css">
+    <link rel="stylesheet" href="static/css/idx_index.css">
+</head>
+<body>
+<div id="indexApp">
+    <div class="conItem">
+        <div class="conLeft">
+            <div class="conTop">日程管理系统</div>
+            <el-menu :default-active="activeIndex" class="el-menu-vertical-demo admin-side-menu" @select="handleSelect" @open="handleOpen"
+                     background-color="#ffffff" text-color="#64748b" active-text-color="#0d9488" :unique-opened="true"
+                     style="background-color: #ffffff;height: calc(100% - 48px);border-radius: 10px;margin-top: 12px;border-right: none;">
+                <el-menu-item index="9999" @click="goHome()" style="border-radius: 10px;">
+                    <i class="el-icon-s-home"></i>
+                    <span slot="title">主页</span>
+                </el-menu-item>
+                <el-submenu :index="item.id" v-for="(item,index) in menuList">
+                    <template slot="title">
+                        <i :class="item.icon"></i>
+                        <span>{{item.name}}</span>
+                    </template>
+                    <el-menu-item :index="item.id+'-'+em.id" v-for="(em,idx) in item.list" @click="navigateToMenu(em.child_menu_name1, em.child_menu_menu_href1, em.child_menu_id || em.child_menu_id1)">
+                        <template slot="title">
+                            <i :class="em.child_menu_menu_icon1"></i>
+                            <span>{{em.child_menu_name1}}</span>
+                        </template>
+                    </el-menu-item>
+                </el-submenu>
+            </el-menu>
+        </div>
+        <div class="conRight">
+            <div class="conTopRight">
+                <div style="flex-grow: 1;">当前位置：{{curMenuName}}</div>
+                <div>你好，{{userObj.NAME}}</div>
+                <span class="logout-link" @click="loginOut();" title="退出登录"><i class="el-icon-switch-button"></i> 退出</span>
+            </div>
+
+            <div v-if="activeIndex==9999" class="conIframe conIframe--dashboard">
+                <div class="dashboard-container">
+                    <div class="dashboard-content dashboard-layout">
+                        <header class="welcome-banner dashboard-welcome">
+                            <div class="welcome-text">
+                                <p class="dashboard-welcome-kicker">工作台</p>
+                                <h2>欢迎回来，{{userObj.NAME}}</h2>
+                                <p class="welcome-sub">今日待办与日程一目了然，点击数据卡片可快速进入对应功能。</p>
+                            </div>
+                            <div class="current-date">
+                                <div class="date-big">{{currentDay}}</div>
+                                <div class="date-info">{{currentDateInfo}}</div>
+                            </div>
+                        </header>
+
+                        <section class="stats-row" aria-label="数据概览">
+                            <div class="stat-card" @click="goToSchedule('today')">
+                                <div class="stat-icon stat-icon--a"><i class="el-icon-date"></i></div>
+                                <div class="stat-value">{{todayCount}}</div>
+                                <div class="stat-label">今日日程</div>
+                            </div>
+                            <div class="stat-card" @click="goToSchedule('week')">
+                                <div class="stat-icon stat-icon--b"><i class="el-icon-timer"></i></div>
+                                <div class="stat-value">{{weekCount}}</div>
+                                <div class="stat-label">本周日程</div>
+                            </div>
+                            <div class="stat-card" @click="goToSchedule('month')">
+                                <div class="stat-icon stat-icon--c"><i class="el-icon-calendar"></i></div>
+                                <div class="stat-value">{{monthCount}}</div>
+                                <div class="stat-label">本月日程</div>
+                            </div>
+                            <div class="stat-card" @click="goToTeam()">
+                                <div class="stat-icon stat-icon--d"><i class="el-icon-user"></i></div>
+                                <div class="stat-value">{{teamCount}}</div>
+                                <div class="stat-label">团队成员</div>
+                            </div>
+                        </section>
+
+                        <section class="stats-row" style="margin-top: 12px;" aria-label="个人统计概览">
+                            <div class="stat-card" @click="goToSchedule('todo')">
+                                <div class="stat-icon stat-icon--a"><i class="el-icon-s-order"></i></div>
+                                <div class="stat-value">{{todoCount}}</div>
+                                <div class="stat-label">待办任务</div>
+                            </div>
+                            <div class="stat-card" @click="viewStats()">
+                                <div class="stat-icon stat-icon--b"><i class="el-icon-circle-check"></i></div>
+                                <div class="stat-value">{{completionRate}}%</div>
+                                <div class="stat-label">日程完成率</div>
+                            </div>
+                            <div class="stat-card" @click="goToSchedule('month')">
+                                <div class="stat-icon stat-icon--c"><i class="el-icon-warning-outline"></i></div>
+                                <div class="stat-value">{{scheduleOverdue}}</div>
+                                <div class="stat-label">逾期日程</div>
+                            </div>
+                            <div class="stat-card" @click="viewStats()">
+                                <div class="stat-icon stat-icon--d"><i class="el-icon-pie-chart"></i></div>
+                                <div class="stat-value">{{scheduleDone}}/{{scheduleTotal}}</div>
+                                <div class="stat-label">已完成/总计</div>
+                            </div>
+                        </section>
+
+                        <div class="dashboard-panels">
+                            <section class="content-card dashboard-panel dashboard-panel--main">
+                                <div class="card-header">
+                                    <h3>今日日程</h3>
+                                    <el-button size="small" type="primary" icon="el-icon-plus" @click="addSchedule">新建日程</el-button>
+                                </div>
+                                <div class="schedule-list" v-if="todaySchedules.length > 0">
+                                    <div class="schedule-item" v-for="(item, index) in todaySchedules" :key="index">
+                                        <div class="schedule-time">
+                                            <i class="el-icon-time"></i> {{item.time}}
+                                        </div>
+                                        <div class="schedule-title">{{item.title}}</div>
+                                        <div class="schedule-desc" v-if="item.desc">{{item.desc}}</div>
+                                    </div>
+                                </div>
+                                <div class="empty-state" v-else>
+                                    <i class="el-icon-coffee-cup"></i>
+                                    <p>今天暂无日程安排</p>
+                                    <el-button type="primary" size="small" @click="addSchedule">创建第一个日程</el-button>
+                                </div>
+                            </section>
+
+                            <aside class="content-card dashboard-panel dashboard-panel--aside">
+                                <div class="card-header">
+                                    <h3>快速操作</h3>
+                                </div>
+                                <div class="quick-actions">
+                                    <div class="action-btn action-btn--a" @click="addSchedule">
+                                        <i class="el-icon-plus"></i>
+                                        <div>新建日程</div>
+                                    </div>
+                                    <div class="action-btn action-btn--b" @click="viewCalendar">
+                                        <i class="el-icon-date"></i>
+                                        <div>查看日历</div>
+                                    </div>
+                                    <div class="action-btn action-btn--c" @click="viewTeamSchedule">
+                                        <i class="el-icon-s-custom"></i>
+                                        <div>团队日程</div>
+                                    </div>
+                                    <div class="action-btn action-btn--d" @click="viewStats">
+                                        <i class="el-icon-data-analysis"></i>
+                                        <div>统计分析</div>
+                                    </div>
+                                </div>
+                            </aside>
+                        </div>
+
+                        <section class="content-card dashboard-notice" v-if="notices && notices.length > 0">
+                            <div class="card-header">
+                                <h3>最新公告</h3>
+                                <el-button size="small" type="text" @click="viewAllNotices">查看全部</el-button>
+                            </div>
+                            <div class="notice-list">
+                                <div class="notice-item" v-for="(notice, index) in notices" :key="index">
+                                    <div class="notice-title">{{notice.title}}</div>
+                                    <div class="notice-time">
+                                        <i class="el-icon-time"></i> {{notice.publish_time}}
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+
+            <iframe v-else :src="acticeIframeUrl" :id="acticeIframeUrl" frameborder="0" width="98%" min-width="100%"
+                    scrolling="auto" class="conIframe"></iframe>
+        </div>
+    </div>
+</div>
+</body>
+<script src="static/js/vue.js"></script>
+<script src="static/element-ui/lib/index.js"></script>
+<script src="static/js/jquery-2.2.3.min.js"></script>
+<script>
+    var basePath = "/" + window.location.pathname.split("/")[1];
+    var indexApp = new Vue({
+        el: "#indexApp",
+        data() {
+            return {
+                curMenuName:'主页',
+                activeIndex: "9999",
+                acticeIframeUrl: "",
+                userObj: {},
+                isFullScreenFlag: false,
+                noticeList: [],
+                menuList: [],
+                childMenuList: [],
+                currentDay: '',
+                currentDateInfo: '',
+                todayCount: 0,
+                weekCount: 0,
+                monthCount: 0,
+                teamCount: 0,
+                todoCount: 0,
+                completionRate: 0,
+                scheduleTotal: 0,
+                scheduleDone: 0,
+                scheduleOverdue: 0,
+                todaySchedules: [],
+                notices: []
+            }
+        },
+        created() {
+            try {
+                this.userObj = JSON.parse(localStorage.getItem("userInfo") || "{}");
+            } catch (e) {
+                this.userObj = {};
+            }
+            if (!this.userObj || this.userObj.role_manage_id == null || this.userObj.role_manage_id === '') {
+                localStorage.removeItem("userInfo");
+                window.location.href = basePath + "/idx_login";
+                return;
+            }
+            this.getMenuList(this.userObj.role_manage_id);
+            this.initDashboard();
+        },
+        mounted() {
+        },
+        methods: {
+            initDashboard() {
+                this.updateCurrentDate();
+                this.loadDashboardData();
+            },
+            updateCurrentDate() {
+                const now = new Date();
+                const weekDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+                this.currentDay = now.getDate();
+                this.currentDateInfo = `${now.getFullYear()}年${now.getMonth() + 1}月 ${weekDays[now.getDay()]}`;
+            },
+            loadDashboardData() {
+                let that = this;
+                var uid = (that.userObj && (that.userObj.id != null && that.userObj.id !== ''))
+                    ? that.userObj.id
+                    : (that.userObj && that.userObj.ID != null ? that.userObj.ID : '');
+                if (uid === '' || uid == null) {
+                    that.loadMockData();
+                    return;
+                }
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/app_schedule_task/queryDashboardData`,
+                    data: {user_id: uid},
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.status === 0 && data.data) {
+                            var d = data.data;
+                            that.todayCount = Number(d.todayCount) || 0;
+                            that.weekCount = Number(d.weekCount) || 0;
+                            that.monthCount = Number(d.monthCount) || 0;
+                            that.teamCount = Number(d.teamCount) || 0;
+                            that.todoCount = Number(d.todoCount) || 0;
+                            that.completionRate = d.completionRate != null ? Number(d.completionRate) : 0;
+                            that.scheduleTotal = Number(d.scheduleTotal) || 0;
+                            that.scheduleDone = Number(d.scheduleDone) || 0;
+                            that.scheduleOverdue = Number(d.scheduleOverdue) || 0;
+                            that.todaySchedules = d.todaySchedules || [];
+                            that.notices = d.notices || [];
+                        } else {
+                            that.loadMockData();
+                        }
+                    },
+                    error: function() {
+                        that.loadMockData();
+                    }
+                });
+            },
+            loadMockData() {
+                this.todayCount = 3;
+                this.weekCount = 12;
+                this.monthCount = 45;
+                this.teamCount = 8;
+                this.todoCount = 2;
+                this.completionRate = 0;
+                this.scheduleTotal = 0;
+                this.scheduleDone = 0;
+                this.scheduleOverdue = 0;
+                this.todaySchedules = [
+                    {time: '09:00 - 10:00', title: '团队晨会', desc: '讨论本周工作计划'},
+                    {time: '14:00 - 15:30', title: '项目评审会议', desc: 'Q1项目进度评审'},
+                    {time: '16:00 - 17:00', title: '客户沟通', desc: '需求确认会议'}
+                ];
+                this.notices = [
+                    {title: '系统维护通知', publish_time: '2026-04-10 10:00:00'},
+                    {title: '新版本上线公告', publish_time: '2026-04-08 15:30:00'}
+                ];
+            },
+            getMenuList(role_manage_id) {
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/permission_menu/queryPermission_menuKey1`,
+                    data: {role_manage_id},
+                    success: function (data) {
+                        that.menuList = (data && data.data) ? data.data : [];
+                        // 首次进入偶发空菜单时自动补一次请求，避免用户必须退出重登
+                        if ((!that.menuList || that.menuList.length === 0) && role_manage_id != null && role_manage_id !== '') {
+                            setTimeout(function () {
+                                $.ajax({
+                                    type: "GET",
+                                    url: `${basePath}/permission_menu/queryPermission_menuKey1`,
+                                    data: {role_manage_id},
+                                    success: function (d2) {
+                                        that.menuList = (d2 && d2.data) ? d2.data : [];
+                                    }
+                                });
+                            }, 200);
+                        }
+                    },
+                    error: function () {
+                        that.menuList = [];
+                    }
+                })
+            },
+            handleOpen(id){
+                console.log(id);
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/child_menu/queryChild_menuKey`,
+                    data: {menu_id:id},
+                    success: function (data) {
+                        that.childMenuList=data.data;
+                    }
+                })
+            },
+            handleSelect(key, keyPath) {
+                console.log(key);
+                this.activeIndex = key;
+            },
+            loginOut() {
+                var that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/logout`,
+                    data: {},
+                    success: function (data) {
+                        window.location.href = basePath + "/idx_login";
+                        localStorage.removeItem("userInfo")
+                    }
+                })
+            },
+            fullScreen() {
+                this.isFullScreenFlag = true;
+                var docElm = document.documentElement;
+                if (docElm.requestFullscreen) {
+                    docElm.requestFullscreen();
+                }
+                else if (docElm.mozRequestFullScreen) {
+                    docElm.mozRequestFullScreen();
+                }
+                else if (docElm.webkitRequestFullScreen) {
+                    docElm.webkitRequestFullScreen();
+                }
+                else if (elem.msRequestFullscreen) {
+                    elem.msRequestFullscreen();
+                }
+            },
+            miniScreen() {
+                this.isFullScreenFlag = false;
+                var el = document;
+                var cfs = el.cancelFullScreen || el.webkitCancelFullScreen || el.mozCancelFullScreen || el.exitFullScreen;
+                if (typeof cfs != "undefined" && cfs) {
+                    cfs.call(el);
+                } else if (typeof window.ActiveXObject != "undefined") {
+                    var wscript = new ActiveXObject("WScript.Shell");
+                    if (wscript != null) {
+                        wscript.SendKeys("{F11}");
+                    }
+                }
+            },
+            goHome() {
+                this.curMenuName = '主页';
+                this.activeIndex = '9999';
+                this.acticeIframeUrl = '';
+                this.updateCurrentDate();
+                this.loadDashboardData();
+            },
+            navigateToMenu(name, src, child_menu_id) {
+                this.curMenuName = name;
+                var url = src;
+                if (child_menu_id != null && String(child_menu_id) !== '') {
+                    var sep = (src && src.indexOf('?') >= 0) ? '&' : '?';
+                    url = src + sep + 'child_menu_id=' + encodeURIComponent(String(child_menu_id));
+                }
+                this.acticeIframeUrl = url;
+                this.activeIndex = '1';
+            },
+            findChildMenuIdByHref(href) {
+                if (!href || !this.menuList || !this.menuList.length) return '';
+                var normalized = href.replace(basePath + '/login_href/', 'login_href/');
+                for (var i = 0; i < this.menuList.length; i++) {
+                    var g = this.menuList[i];
+                    var lst = (g && g.list) ? g.list : [];
+                    for (var j = 0; j < lst.length; j++) {
+                        var it = lst[j] || {};
+                        var h = it.child_menu_menu_href1 || '';
+                        if (h === normalized || h === href) {
+                            return it.child_menu_id != null && it.child_menu_id !== '' ? it.child_menu_id : (it.child_menu_id1 || '');
+                        }
+                    }
+                }
+                return '';
+            },
+            addSchedule() {
+                console.log('点击了新建日程');
+                var cid = this.findChildMenuIdByHref('login_href/idx_app_schedule_task');
+                this.navigateToMenu('新建日程', basePath + '/login_href/idx_app_schedule_task', cid);
+            },
+            viewCalendar() {
+                console.log('点击查看日历');
+                var cid = this.findChildMenuIdByHref('login_href/idx_app_schedule_task');
+                this.navigateToMenu('日程管理', basePath + '/login_href/idx_app_schedule_task', cid);
+            },
+            viewTeamSchedule() {
+                console.log('点击查看团队日程');
+                var cid = this.findChildMenuIdByHref('login_href/idx_app_team_schedule');
+                this.navigateToMenu('团队日程', basePath + '/login_href/idx_app_team_schedule', cid);
+            },
+            viewStats() {
+                var cid = this.findChildMenuIdByHref('login_href/idx_personal_stats');
+                this.navigateToMenu('个人统计', basePath + '/login_href/idx_personal_stats', cid);
+            },
+            goToSchedule(type) {
+                console.log('点击了日程卡片:', type);
+                var cid = this.findChildMenuIdByHref('login_href/idx_app_schedule_task');
+                if (type === 'today' || type === 'week' || type === 'month') {
+                    this.navigateToMenu('日程管理', basePath + '/login_href/idx_app_schedule_task?date_type=' + type, cid);
+                } else if (type === 'todo') {
+                    this.navigateToMenu('日程管理', basePath + '/login_href/idx_app_schedule_task?todo_only=1', cid);
+                } else {
+                    this.navigateToMenu('日程管理', basePath + '/login_href/idx_app_schedule_task', cid);
+                }
+            },
+            goToTeam() {
+                console.log('点击了团队成员');
+                var cid = this.findChildMenuIdByHref('login_href/idx_app_team');
+                this.navigateToMenu('团队管理', basePath + '/login_href/idx_app_team', cid);
+            },
+            viewAllNotices() {
+                console.log('点击查看全部公告');
+                var cid = this.findChildMenuIdByHref('login_href/idx_app_notice');
+                this.navigateToMenu('系统公告', basePath + '/login_href/idx_app_notice', cid);
+            }
+        }
+    })
+</script>
+</html>
+

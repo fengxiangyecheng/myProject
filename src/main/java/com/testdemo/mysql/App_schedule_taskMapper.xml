@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.testdemo.mapper.App_schedule_taskMapper">
+    <sql id="Task_Schedule_Team_Scope_NonPage">
+        <if test="(skip_team_schedule_scope == null or skip_team_schedule_scope == '') and login_user_id != null and login_user_id != '' and (role_manage_id == null or role_manage_id == '' or role_manage_id != '1')">
+            and (
+            CAST(schedule_id.team_id AS CHAR) in (
+            SELECT CAST(t.id AS CHAR) FROM app_team t
+            WHERE CAST(t.admin_id AS CHAR)=CAST(#{login_user_id} AS CHAR) OR CAST(t.creator_id AS CHAR)=CAST(#{login_user_id} AS CHAR)
+            )
+            OR CAST(schedule_id.team_id AS CHAR) in (
+            SELECT CAST(tu.team_id AS CHAR) FROM app_team_user tu
+            WHERE CAST(tu.user_id AS CHAR)=CAST(#{login_user_id} AS CHAR) AND CAST(IFNULL(tu.status,'') AS CHAR)='1'
+            )
+            )
+        </if>
+    </sql>
+    <sql id="Task_Schedule_Team_Scope_Page">
+        <if test="(pd.skip_team_schedule_scope == null or pd.skip_team_schedule_scope == '') and pd.login_user_id != null and pd.login_user_id != '' and (pd.role_manage_id == null or pd.role_manage_id == '' or pd.role_manage_id != '1')">
+            and (
+            CAST(schedule_id.team_id AS CHAR) in (
+            SELECT CAST(t.id AS CHAR) FROM app_team t
+            WHERE CAST(t.admin_id AS CHAR)=CAST(#{pd.login_user_id} AS CHAR) OR CAST(t.creator_id AS CHAR)=CAST(#{pd.login_user_id} AS CHAR)
+            )
+            OR CAST(schedule_id.team_id AS CHAR) in (
+            SELECT CAST(tu.team_id AS CHAR) FROM app_team_user tu
+            WHERE CAST(tu.user_id AS CHAR)=CAST(#{pd.login_user_id} AS CHAR) AND CAST(IFNULL(tu.status,'') AS CHAR)='1'
+            )
+            )
+        </if>
+    </sql>
+    <sql id="Base_Column_List">
+        su.id id,
+        su.schedule_id schedule_id,
+        su.task_name task_name,
+        su.task_content task_content,
+        su.assigner_id assigner_id,
+        su.assignee_id assignee_id,
+        su.assignee_id assignees_id,
+        su.deadline deadline,
+        su.status status,
+        su.schedule_type_code schedule_type_code,
+        su.create_time create_time,
+        su.update_time update_time
+    </sql>
+    <!--在数据不存在的情况下进行添加-->
+    <insert id="addApp_schedule_task" parameterType="pd">
+        insert into app_schedule_task (schedule_id,
+                                       task_name,
+                                       task_content,
+                                       assigner_id,
+                                       assignee_id,
+                                       deadline,
+                                       status,
+                                       schedule_type_code,
+                                       create_time,
+                                       update_time)
+        values (#{schedule_id},
+                #{task_name},
+                #{task_content},
+                #{assigner_id},
+                #{assignee_id},
+                #{deadline},
+                #{status},
+                #{schedule_type_code},
+                now(),
+                now()) </insert>
+    <!--根据id删除数据-->
+    <delete id="deleteApp_schedule_taskId" parameterType="pd">
+        DELETE
+        FROM app_schedule_task
+        WHERE id = #{id};
+    </delete>
+    <!--根据id更新数据-->
+    <update id="updateApp_schedule_task" parameterType="pd">
+        UPDATE app_schedule_task
+        <set>
+
+            <if test="schedule_id != null and schedule_id !=''">schedule_id = #{schedule_id},</if>
+            <if test="task_name != null and task_name !=''">task_name = #{task_name},</if>
+            <if test="task_content != null and task_content !=''">task_content = #{task_content},</if>
+            <if test="assigner_id != null and assigner_id !=''">assigner_id = #{assigner_id},</if>
+            <if test="assignee_id != null and assignee_id !=''">assignee_id = #{assignee_id},</if>
+            <if test="deadline != null and deadline !=''">deadline = #{deadline},</if>
+            <if test="status != null and status !=''">status = #{status},</if>
+            <if test="schedule_type_code != null">schedule_type_code = #{schedule_type_code},</if>
+
+            update_time = now(),
+        </set>
+        WHERE id = #{id};
+    </update>
+    <!--获取数据 不分页-->
+    <select id="queryApp_schedule_taskKey" parameterType="pd" resultType="pd" useCache="false">
+        SELECT
+        <include refid="Base_Column_List"/>
+        <!--向左关联查询返回对应字段-->
+        ,schedule_id.id as schedule_id_id1
+        ,schedule_id.team_id as schedule_id_team_id1
+        ,schedule_id.title as schedule_id_title1
+        ,schedule_id.content as schedule_id_content1
+        ,schedule_id.start_time as schedule_id_start_time1
+        ,schedule_id.end_time as schedule_id_end_time1
+        ,schedule_id.creator_id as schedule_id_creator_id1
+        ,schedule_id.status as schedule_id_status1
+        ,schedule_id.create_time as schedule_id_create_time1
+        ,schedule_id.update_time as schedule_id_update_time1
+        ,assigner_id.id as assigner_id_id1
+        ,assigner_id.USERNAME as assigner_id_USERNAME1
+        ,assigner_id.PASSWORD as assigner_id_PASSWORD1
+        ,assigner_id.NAME as assigner_id_NAME1
+        ,assigner_id.role_manage_id as assigner_id_role_manage_id1
+        ,assigner_id.create_time as assigner_id_create_time1
+        ,assigner_id.update_time as assigner_id_update_time1
+        ,assigner_id.signature as assigner_id_signature1
+        ,assignee_id.id as assignee_id_id1
+        ,COALESCE(assignee_id.USERNAME, app_assignee.username) as assignee_id_USERNAME1
+        ,COALESCE(assignee_id.USERNAME, app_assignee.username,
+            CASE WHEN su.assignee_id IS NULL OR TRIM(IFNULL(CAST(su.assignee_id AS CHAR),'')) = '' THEN '(未分配)'
+            ELSE CONCAT('ID:', TRIM(CAST(su.assignee_id AS CHAR)), '（无匹配账号）') END) AS assignees_id_USERNAME1
+        ,assignee_id.PASSWORD as assignee_id_PASSWORD1
+        ,assignee_id.NAME as assignee_id_NAME1
+        ,assignee_id.role_manage_id as assignee_id_role_manage_id1
+        ,assignee_id.create_time as assignee_id_create_time1
+        ,assignee_id.update_time as assignee_id_update_time1
+        ,assignee_id.signature as assignee_id_signature1
+        ,stype.type_name as schedule_type_name1
+        FROM app_schedule_task su
+        <!--向左关联查询-->
+        left join app_team_schedule schedule_id on schedule_id.id=su.schedule_id
+        left join sys_user assigner_id on CAST(assigner_id.id AS CHAR) = TRIM(CAST(IFNULL(su.assigner_id,'') AS CHAR))
+        left join sys_user assignee_id on CAST(assignee_id.id AS CHAR) = TRIM(CAST(IFNULL(su.assignee_id,'') AS CHAR))
+        left join app_user app_assignee on CAST(app_assignee.id AS CHAR) = TRIM(CAST(IFNULL(su.assignee_id,'') AS CHAR))
+        left join app_schedule_type stype on stype.type_code = su.schedule_type_code
+        where 1 = 1
+        <if test="id != null and id != '' ">and su.id = #{id}</if>
+        <if test="schedule_id != null and schedule_id != '' ">and su.schedule_id = #{schedule_id}</if>
+        <if test="task_name != null and task_name != '' ">and su.task_name = #{task_name}</if>
+        <if test="task_content != null and task_content != '' ">and su.task_content = #{task_content}</if>
+        <if test="assigner_id != null and assigner_id != '' ">and su.assigner_id = #{assigner_id}</if>
+        <if test="assignee_id != null and assignee_id != '' ">and su.assignee_id = #{assignee_id}</if>
+        <if test="assignees_id != null and assignees_id != '' ">and su.assignee_id = #{assignees_id}</if>
+        <if test="participant_user_id != null and participant_user_id != ''">
+            and (su.assignee_id = #{participant_user_id} or su.assigner_id = #{participant_user_id})
+        </if>
+        <if test="date_type != null and date_type != ''">
+            <if test="date_type == 'today'">
+                AND DATE(su.deadline) = CURDATE()
+            </if>
+            <if test="date_type == 'week'">
+                AND YEARWEEK(su.deadline, 1) = YEARWEEK(NOW(), 1)
+            </if>
+            <if test="date_type == 'month'">
+                AND YEAR(su.deadline) = YEAR(NOW())
+                AND MONTH(su.deadline) = MONTH(NOW())
+            </if>
+        </if>
+        <if test="todo_only != null and todo_only != ''">
+            AND CAST(IFNULL(su.status,'') AS CHAR) IN ('0','1')
+        </if>
+        <if test="deadline != null and deadline != '' ">and su.deadline = #{deadline}</if>
+        <if test="status != null and status != '' ">and su.status = #{status}</if>
+        <if test="schedule_type_code != null and schedule_type_code != '' ">and su.schedule_type_code = #{schedule_type_code}</if>
+        <if test="create_time != null and create_time != '' ">and su.create_time = #{create_time}</if>
+        <if test="update_time != null and update_time != '' ">and su.update_time = #{update_time}</if>
+        <include refid="Task_Schedule_Team_Scope_NonPage"/>
+    </select>
+    <!--获取用户列表数据 分页-->
+    <select id="queryPageApp_schedule_taskKeyList" parameterType="page" resultType="pd" useCache="false">
+        SELECT
+        <include refid="Base_Column_List"/>
+        <!--向左关联查询返回对应字段-->
+        ,schedule_id.id as schedule_id_id1
+        ,schedule_id.team_id as schedule_id_team_id1
+        ,schedule_id.title as schedule_id_title1
+        ,schedule_id.content as schedule_id_content1
+        ,schedule_id.start_time as schedule_id_start_time1
+        ,schedule_id.end_time as schedule_id_end_time1
+        ,schedule_id.creator_id as schedule_id_creator_id1
+        ,schedule_id.status as schedule_id_status1
+        ,schedule_id.create_time as schedule_id_create_time1
+        ,schedule_id.update_time as schedule_id_update_time1
+        ,assigner_id.id as assigner_id_id1
+        ,assigner_id.USERNAME as assigner_id_USERNAME1
+        ,assigner_id.PASSWORD as assigner_id_PASSWORD1
+        ,assigner_id.NAME as assigner_id_NAME1
+        ,assigner_id.role_manage_id as assigner_id_role_manage_id1
+        ,assigner_id.create_time as assigner_id_create_time1
+        ,assigner_id.update_time as assigner_id_update_time1
+        ,assigner_id.signature as assigner_id_signature1
+        ,assignee_id.id as assignee_id_id1
+        ,COALESCE(assignee_id.USERNAME, app_assignee.username) as assignee_id_USERNAME1
+        ,COALESCE(assignee_id.USERNAME, app_assignee.username,
+            CASE WHEN su.assignee_id IS NULL OR TRIM(IFNULL(CAST(su.assignee_id AS CHAR),'')) = '' THEN '(未分配)'
+            ELSE CONCAT('ID:', TRIM(CAST(su.assignee_id AS CHAR)), '（无匹配账号）') END) AS assignees_id_USERNAME1
+        ,assignee_id.PASSWORD as assignee_id_PASSWORD1
+        ,assignee_id.NAME as assignee_id_NAME1
+        ,assignee_id.role_manage_id as assignee_id_role_manage_id1
+        ,assignee_id.create_time as assignee_id_create_time1
+        ,assignee_id.update_time as assignee_id_update_time1
+        ,assignee_id.signature as assignee_id_signature1
+        ,stype.type_name as schedule_type_name1
+        <if test="pd.user_id != null">
+        ,(SELECT COUNT(1) FROM app_schedule_favorite fav
+          WHERE CAST(fav.user_id AS CHAR) = CAST(#{pd.user_id} AS CHAR)
+            AND CAST(fav.task_id AS CHAR) = CAST(su.id AS CHAR)) AS favorited
+        </if>
+        FROM app_schedule_task su
+        <!--向左关联查询-->
+        left join app_team_schedule schedule_id on schedule_id.id=su.schedule_id
+        left join sys_user assigner_id on CAST(assigner_id.id AS CHAR) = TRIM(CAST(IFNULL(su.assigner_id,'') AS CHAR))
+        left join sys_user assignee_id on CAST(assignee_id.id AS CHAR) = TRIM(CAST(IFNULL(su.assignee_id,'') AS CHAR))
+        left join app_user app_assignee on CAST(app_assignee.id AS CHAR) = TRIM(CAST(IFNULL(su.assignee_id,'') AS CHAR))
+        left join app_schedule_type stype on stype.type_code = su.schedule_type_code
+        where 1 = 1
+        <if test="pd.id != null and pd.id !=''">and su.id = #{pd.id}</if>
+        <if test="pd.schedule_id != null and pd.schedule_id !=''">and su.schedule_id = #{pd.schedule_id}</if>
+        <if test="pd.task_name != null and pd.task_name !=''">and su.task_name = #{pd.task_name}</if>
+        <if test="pd.task_content != null and pd.task_content !=''">and su.task_content = #{pd.task_content}</if>
+        <if test="pd.assigner_id != null and pd.assigner_id !=''">and su.assigner_id = #{pd.assigner_id}</if>
+        <if test="pd.assignee_id != null and pd.assignee_id !=''">and su.assignee_id = #{pd.assignee_id}</if>
+        <if test="pd.assignees_id != null and pd.assignees_id !=''">and su.assignee_id = #{pd.assignees_id}</if>
+        <if test="pd.participant_user_id != null and pd.participant_user_id != ''">
+            and (su.assignee_id = #{pd.participant_user_id} or su.assigner_id = #{pd.participant_user_id})
+        </if>
+        <if test="pd.date_type != null and pd.date_type != ''">
+            <if test="pd.date_type == 'today'">
+                AND DATE(su.deadline) = CURDATE()
+            </if>
+            <if test="pd.date_type == 'week'">
+                AND YEARWEEK(su.deadline, 1) = YEARWEEK(NOW(), 1)
+            </if>
+            <if test="pd.date_type == 'month'">
+                AND YEAR(su.deadline) = YEAR(NOW())
+                AND MONTH(su.deadline) = MONTH(NOW())
+            </if>
+        </if>
+        <if test="pd.todo_only != null and pd.todo_only != ''">
+            AND CAST(IFNULL(su.status,'') AS CHAR) IN ('0','1')
+        </if>
+        <if test="pd.deadline != null and pd.deadline !=''">and su.deadline = #{pd.deadline}</if>
+        <if test="pd.status != null and pd.status !=''">and su.status = #{pd.status}</if>
+        <if test="pd.schedule_type_code != null and pd.schedule_type_code !=''">and su.schedule_type_code = #{pd.schedule_type_code}</if>
+        <if test="pd.create_time != null and pd.create_time !=''">and su.create_time = #{pd.create_time}</if>
+        <if test="pd.update_time != null and pd.update_time !=''">and su.update_time = #{pd.update_time}</if>
+        <include refid="Task_Schedule_Team_Scope_Page"/>
+    </select>
+
+    <select id="countValidTaskAssigner" parameterType="pd" resultType="int">
+        SELECT COUNT(1)
+        FROM sys_user su
+        WHERE CAST(su.id AS CHAR) = TRIM(CAST(#{assigner_id} AS CHAR))
+          AND CAST(IFNULL(su.role_manage_id,'') AS CHAR) IN ('1','2')
+          AND CAST(IFNULL(su.account_status,'1') AS CHAR) = '1'
+    </select>
+
+    <select id="countValidTaskAssignee" parameterType="pd" resultType="int">
+        SELECT COUNT(1)
+        FROM app_user au
+        WHERE CAST(au.id AS CHAR) = TRIM(CAST(#{assignee_id} AS CHAR))
+          AND CAST(IFNULL(au.account_status,'1') AS CHAR) = '1'
+    </select>
+
+    <select id="queryPersonalScheduleStats" resultType="pd">
+        SELECT
+            COUNT(1) AS total_cnt,
+            SUM(CASE WHEN CAST(IFNULL(status,'') AS CHAR) = '2' THEN 1 ELSE 0 END) AS done_cnt,
+            SUM(CASE WHEN CAST(IFNULL(status,'') AS CHAR) IN ('0','1') THEN 1 ELSE 0 END) AS active_cnt,
+            SUM(CASE WHEN CAST(IFNULL(status,'') AS CHAR) = '3' THEN 1 ELSE 0 END) AS overdue_cnt
+        FROM app_schedule_task
+        WHERE (assignee_id = #{uid} OR assigner_id = #{uid})
+    </select>
+
+    <select id="queryScheduleTypeBreakdown" resultType="pd">
+        SELECT IFNULL(NULLIF(TRIM(schedule_type_code),''), '_none') AS type_code, COUNT(1) AS cnt
+        FROM app_schedule_task
+        WHERE (assignee_id = #{uid} OR assigner_id = #{uid})
+        GROUP BY IFNULL(NULLIF(TRIM(schedule_type_code),''), '_none')
+    </select>
+
+    <!-- 已标记完成且完成时间不晚于截止时间（无截止时间视为达标） -->
+    <select id="queryReminderOnTimeStats" resultType="pd">
+        SELECT
+            COUNT(1) AS done_cnt,
+            SUM(CASE
+                WHEN su.deadline IS NULL OR TRIM(IFNULL(CAST(su.deadline AS CHAR), '')) = '' THEN 1
+                WHEN COALESCE(su.update_time, su.create_time) &lt;= su.deadline THEN 1
+                ELSE 0 END) AS on_time_cnt
+        FROM app_schedule_task su
+        WHERE (CAST(su.assignee_id AS CHAR) = TRIM(CAST(#{uid} AS CHAR))
+            OR CAST(su.assigner_id AS CHAR) = TRIM(CAST(#{uid} AS CHAR)))
+          AND CAST(IFNULL(su.status, '') AS CHAR) = '2'
+    </select>
+
+    <!-- JustinLi update-->
+
+    <!-- 根据日期类型统计日程数量（被分配人或分配人为当前用户均统计） -->
+    <select id="countScheduleByDateType" parameterType="com.testdemo.entity.system.PageData" resultType="int">
+        SELECT COUNT(*) FROM app_schedule_task
+        WHERE (assignee_id = #{assignees_id} OR assigner_id = #{assignees_id})
+        <if test="date_type == 'today'">
+            AND DATE(deadline) = CURDATE()
+        </if>
+        <if test="date_type == 'week'">
+            AND YEARWEEK(deadline, 1) = YEARWEEK(NOW(), 1)
+        </if>
+        <if test="date_type == 'month'">
+            AND YEAR(deadline) = YEAR(NOW())
+            AND MONTH(deadline) = MONTH(NOW())
+        </if>
+        AND CAST(IFNULL(status,'') AS CHAR) IN ('0','1')
+    </select>
+
+    <!-- 关联团队数：已加入 + 创建/管理的团队 -->
+    <select id="countTeamMembers" parameterType="String" resultType="int">
+        SELECT COUNT(DISTINCT tid) FROM (
+            SELECT CAST(team_id AS CHAR) AS tid FROM app_team_user
+            WHERE user_id = #{userId} AND CAST(IFNULL(status,'') AS CHAR) IN ('1')
+            UNION
+            SELECT CAST(id AS CHAR) AS tid FROM app_team
+            WHERE (CAST(creator_id AS CHAR) = CAST(#{userId} AS CHAR) OR CAST(admin_id AS CHAR) = CAST(#{userId} AS CHAR))
+              AND CAST(IFNULL(status,'') AS CHAR) = '1'
+        ) u
+    </select>
+
+
+    <!-- 查询今日详细日程列表 -->
+    <select id="queryTodaySchedules" parameterType="String" resultType="com.testdemo.entity.system.PageData">
+        SELECT
+            ast.id,
+            ast.task_name AS title,
+            ast.task_content AS description,
+            DATE_FORMAT(ast.deadline, '%H:%i') AS start_time,
+            DATE_FORMAT(ast.deadline, '%H:%i') AS end_time,
+            CONCAT(DATE_FORMAT(ast.deadline, '%H:%i'), ' - ',
+                   DATE_FORMAT(DATE_ADD(ast.deadline, INTERVAL 1 HOUR), '%H:%i')) AS time,
+        ast.status,
+        ast.schedule_id
+        FROM app_schedule_task ast
+        WHERE (ast.assignee_id = #{userId} OR ast.assigner_id = #{userId})
+          AND DATE(ast.deadline) = CURDATE()
+          AND CAST(IFNULL(ast.status,'') AS CHAR) IN ('0', '1')
+        ORDER BY ast.deadline ASC
+            LIMIT 10
+    </select>
+
+    <!-- 查询最新公告 -->
+    <select id="queryLatestNotices" parameterType="int" resultType="com.testdemo.entity.system.PageData">
+        SELECT
+            id,
+            title,
+            content,
+            publisher_id,
+            publish_time,
+            status
+        FROM app_notice
+        WHERE status = '1'
+        ORDER BY publish_time DESC
+            LIMIT #{limit}
+    </select>
+
+    <select id="queryPendingTeamInvites" resultType="com.testdemo.entity.system.PageData">
+        SELECT
+            tu.id,
+            CONCAT('团队邀请：', IFNULL(t.team_name, CONCAT('团队#', tu.team_id)), '（',
+                CASE CAST(IFNULL(tu.join_type,'') AS CHAR)
+                    WHEN '1' THEN '申请加入'
+                    WHEN '2' THEN '邀请加入'
+                    ELSE IFNULL(tu.join_type,'未知类型')
+                END, '）') AS title,
+            CONCAT('请前往「团队用户关联」处理，当前状态：待审核') AS content,
+            tu.join_time AS publish_time,
+            '1' AS status
+        FROM app_team_user tu
+        LEFT JOIN app_team t ON CAST(t.id AS CHAR)=CAST(tu.team_id AS CHAR)
+        WHERE CAST(IFNULL(tu.user_id,'') AS CHAR)=CAST(#{uid} AS CHAR)
+          AND CAST(IFNULL(tu.status,'') AS CHAR)='0'
+        ORDER BY tu.id DESC
+        LIMIT 20
+    </select>
+
+
+
+
+</mapper>
+

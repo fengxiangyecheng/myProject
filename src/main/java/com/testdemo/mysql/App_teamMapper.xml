@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.testdemo.mapper.App_teamMapper">
+<sql id="Base_Column_List">
+su.id id,
+su.team_name team_name,
+su.creator_id creator_id,
+su.admin_id admin_id,
+su.description description,
+su.status status,
+su.audit_status audit_status,
+su.create_time create_time,
+su.update_time update_time
+</sql>
+<!--在数据不存在的情况下进行添加-->
+<insert id="addApp_team" parameterType="pd">
+insert into app_team (
+team_name,
+creator_id,
+admin_id,
+description,
+status,
+audit_status,
+create_time,
+update_time
+ ) values (
+#{team_name},
+#{creator_id},
+#{admin_id},
+#{description},
+#{status},
+'0',
+now(),
+now()
+) </insert>
+<!--根据id删除数据-->
+<delete id="deleteApp_teamId" parameterType="pd"  >
+DELETE FROM  app_team WHERE id = #{id};
+</delete>
+<!--根据id更新数据-->
+<update id="updateApp_team" parameterType="pd"  >
+UPDATE app_team  <set>
+
+<if test="team_name != null and team_name !=''"> team_name = #{team_name}, </if>
+<if test="creator_id != null and creator_id !=''"> creator_id = #{creator_id}, </if>
+<if test="admin_id != null and admin_id !=''"> admin_id = #{admin_id}, </if>
+<if test="description != null and description !=''"> description = #{description}, </if>
+<if test="status != null and status !=''"> status = #{status}, </if>
+<if test="audit_status != null and audit_status !=''"> audit_status = #{audit_status}, </if>
+
+update_time = now(),
+</set>
+ WHERE id = #{id}; </update>
+<!--获取数据 不分页-->
+<select id="queryApp_teamKey" parameterType="pd" resultType="pd" useCache="false">
+SELECT <include refid="Base_Column_List"/> 
+<!--向左关联查询返回对应字段-->
+,creator_id.id as creator_id_id1 
+,creator_id.USERNAME as creator_id_USERNAME1 
+,creator_id.PASSWORD as creator_id_PASSWORD1 
+,creator_id.NAME as creator_id_NAME1 
+,creator_id.role_manage_id as creator_id_role_manage_id1 
+,creator_id.create_time as creator_id_create_time1 
+,creator_id.update_time as creator_id_update_time1 
+,creator_id.signature as creator_id_signature1 
+,admin_id.id as admin_id_id1 
+,admin_id.USERNAME as admin_id_USERNAME1 
+,admin_id.PASSWORD as admin_id_PASSWORD1 
+,admin_id.NAME as admin_id_NAME1 
+,admin_id.role_manage_id as admin_id_role_manage_id1 
+,admin_id.create_time as admin_id_create_time1 
+,admin_id.update_time as admin_id_update_time1 
+,admin_id.signature as admin_id_signature1 
+FROM app_team su
+<!--向左关联查询-->
+left join sys_user creator_id on creator_id.id=su.creator_id
+left join sys_user admin_id on admin_id.id=su.admin_id
+where 1 = 1
+ <if test="id != null and id != '' "> and su.id = #{id}  </if>
+ <if test="team_name != null and team_name != '' "> and su.team_name = #{team_name}  </if>
+ <if test="creator_id != null and creator_id != '' "> and su.creator_id = #{creator_id}  </if>
+ <if test="admin_id != null and admin_id != '' "> and su.admin_id = #{admin_id}  </if>
+ <if test="description != null and description != '' "> and su.description = #{description}  </if>
+ <if test="status != null and status != '' "> and su.status = #{status}  </if>
+ <if test="audit_status != null and audit_status != '' "> and su.audit_status = #{audit_status}  </if>
+ <if test="create_time != null and create_time != '' "> and su.create_time = #{create_time}  </if>
+ <if test="update_time != null and update_time != '' "> and su.update_time = #{update_time}  </if>
+</select>
+<!--获取用户列表数据 分页-->
+<select id="queryPageApp_teamKeyList" parameterType="page" resultType="pd" useCache="false">
+SELECT <include refid="Base_Column_List"/> 
+<!--向左关联查询返回对应字段-->
+,creator_id.id as creator_id_id1 
+,creator_id.USERNAME as creator_id_USERNAME1 
+,creator_id.PASSWORD as creator_id_PASSWORD1 
+,creator_id.NAME as creator_id_NAME1 
+,creator_id.role_manage_id as creator_id_role_manage_id1 
+,creator_id.create_time as creator_id_create_time1 
+,creator_id.update_time as creator_id_update_time1 
+,creator_id.signature as creator_id_signature1 
+,admin_id.id as admin_id_id1 
+,admin_id.USERNAME as admin_id_USERNAME1 
+,admin_id.PASSWORD as admin_id_PASSWORD1 
+,admin_id.NAME as admin_id_NAME1 
+,admin_id.role_manage_id as admin_id_role_manage_id1 
+,admin_id.create_time as admin_id_create_time1 
+,admin_id.update_time as admin_id_update_time1 
+,admin_id.signature as admin_id_signature1 
+FROM app_team su
+<!--向左关联查询-->
+left join sys_user creator_id on creator_id.id=su.creator_id
+left join sys_user admin_id on admin_id.id=su.admin_id
+where 1 = 1
+ <if test="pd.id != null and pd.id !=''"> and su.id = #{pd.id}  </if>
+ <if test="pd.team_name != null and pd.team_name !=''"> and su.team_name = #{pd.team_name}  </if>
+ <if test="pd.creator_id != null and pd.creator_id !=''"> and su.creator_id = #{pd.creator_id}  </if>
+ <if test="pd.admin_id != null and pd.admin_id !=''"> and su.admin_id = #{pd.admin_id}  </if>
+ <if test="pd.description != null and pd.description !=''"> and su.description = #{pd.description}  </if>
+ <if test="pd.status != null and pd.status !=''"> and su.status = #{pd.status}  </if>
+ <if test="pd.audit_status != null and pd.audit_status !=''"> and su.audit_status = #{pd.audit_status}  </if>
+ <if test="pd.scope_user_id != null and pd.scope_user_id !=''">
+   and (
+     CAST(su.creator_id AS CHAR) = CAST(#{pd.scope_user_id} AS CHAR)
+     or CAST(su.admin_id AS CHAR) = CAST(#{pd.scope_user_id} AS CHAR)
+     or exists (
+       select 1 from app_team_user tu
+       where CAST(tu.team_id AS CHAR)=CAST(su.id AS CHAR)
+         and CAST(tu.user_id AS CHAR)=CAST(#{pd.scope_user_id} AS CHAR)
+         and CAST(IFNULL(tu.status,'') AS CHAR)='1'
+     )
+   )
+ </if>
+ <if test="pd.create_time != null and pd.create_time !=''"> and su.create_time = #{pd.create_time}  </if>
+ <if test="pd.update_time != null and pd.update_time !=''"> and su.update_time = #{pd.update_time}  </if>
+</select>
+</mapper>

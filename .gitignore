@@ -1,0 +1,4 @@
+target/
+*.log
+.myumldata
+.idea/workspace.xml

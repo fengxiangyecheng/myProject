@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.testdemo.mapper.Permission_menuMapper">
+<sql id="Base_Column_List">
+su.id id,
+su.menu_id menu_id,
+su.child_menu_id child_menu_id,
+su.name_add name_add,
+su.name_edit name_edit,
+su.name_delete name_delete,
+su.name_query name_query,
+su.sys_user_id sys_user_id,
+su.role_manage_id role_manage_id,
+su.create_time create_time
+</sql>
+<!--在数据不存在的情况下进行添加-->
+<insert id="addPermission_menu" parameterType="pd">
+insert into permission_menu (
+menu_id,
+child_menu_id,
+name_add,
+name_edit,
+name_delete,
+name_query,
+sys_user_id,
+role_manage_id,
+create_time
+ ) values (
+#{menu_id},
+#{child_menu_id},
+#{name_add},
+#{name_edit},
+#{name_delete},
+#{name_query},
+#{sys_user_id},
+#{role_manage_id},
+now()
+) </insert>
+<!--根据id删除数据-->
+<delete id="deletePermission_menuId" parameterType="pd"  >
+DELETE FROM  permission_menu WHERE id = #{id};
+</delete>
+<!--根据id更新数据-->
+<update id="updatePermission_menu" parameterType="pd"  >
+UPDATE permission_menu  <set>
+
+<if test="menu_id != null and menu_id !=''"> menu_id = #{menu_id}, </if>
+<if test="child_menu_id != null and child_menu_id !=''"> child_menu_id = #{child_menu_id}, </if>
+<if test="name_add != null and name_add !=''"> name_add = #{name_add}, </if>
+<if test="name_edit != null and name_edit !=''"> name_edit = #{name_edit}, </if>
+<if test="name_delete != null and name_delete !=''"> name_delete = #{name_delete}, </if>
+<if test="name_query != null and name_query !=''"> name_query = #{name_query}, </if>
+<if test="sys_user_id != null and sys_user_id !=''"> sys_user_id = #{sys_user_id}, </if>
+<if test="role_manage_id != null and role_manage_id !=''"> role_manage_id = #{role_manage_id}, </if>
+
+</set>
+ WHERE id = #{id}; </update>
+<!--获取数据 不分页-->
+<select id="queryPermission_menuKey" parameterType="pd" resultType="pd" useCache="false">
+SELECT <include refid="Base_Column_List"/> 
+<!--向左关联查询返回对应字段-->
+,menu.id as menu_id1 
+,menu.name as menu_name1 
+,menu.menu_icon as menu_menu_icon1 
+,menu.index_page as menu_index_page1 
+,menu.create_time as menu_create_time1 
+,child_menu.id as child_menu_id1 
+,child_menu.name as child_menu_name1 
+,child_menu.menu_icon as child_menu_menu_icon1 
+,child_menu.menu_href as child_menu_menu_href1 
+,child_menu.index_page as child_menu_index_page1 
+,child_menu.menu_id as child_menu_menu_id1 
+,child_menu.create_time as child_menu_create_time1 
+,sys_user.id as sys_user_id1 
+,sys_user.USERNAME as sys_user_USERNAME1 
+,sys_user.PASSWORD as sys_user_PASSWORD1 
+,sys_user.NAME as sys_user_NAME1 
+,sys_user.role_manage_id as sys_user_role_manage_id1 
+,sys_user.create_time as sys_user_create_time1 
+,sys_user.update_time as sys_user_update_time1 
+,sys_user.signature as sys_user_signature1 
+,role_manage.id as role_manage_id1 
+,role_manage.role_name as role_manage_role_name1 
+FROM permission_menu su
+<!--向左关联查询-->
+left join menu menu on menu.id=su.menu_id
+left join child_menu child_menu on child_menu.id=su.child_menu_id
+left join sys_user sys_user on sys_user.id=su.sys_user_id
+left join role_manage role_manage on role_manage.id=su.role_manage_id
+where 1 = 1
+ <if test="id != null and id != '' "> and su.id = #{id}  </if>
+ <if test="menu_id != null and menu_id != '' "> and su.menu_id = #{menu_id}  </if>
+ <if test="child_menu_id != null and child_menu_id != '' "> and su.child_menu_id = #{child_menu_id}  </if>
+ <if test="name_add != null and name_add != '' "> and su.name_add = #{name_add}  </if>
+ <if test="name_edit != null and name_edit != '' "> and su.name_edit = #{name_edit}  </if>
+ <if test="name_delete != null and name_delete != '' "> and su.name_delete = #{name_delete}  </if>
+ <if test="name_query != null and name_query != '' "> and su.name_query = #{name_query}  </if>
+ <if test="sys_user_id != null and sys_user_id != '' "> and su.sys_user_id = #{sys_user_id}  </if>
+ <if test="role_manage_id != null and role_manage_id != '' "> and su.role_manage_id = #{role_manage_id}  </if>
+ <if test="create_time != null and create_time != '' "> and su.create_time = #{create_time}  </if>
+</select>
+<!--获取用户列表数据 分页-->
+<select id="queryPagePermission_menuKeyList" parameterType="page" resultType="pd" useCache="false">
+SELECT <include refid="Base_Column_List"/> 
+<!--向左关联查询返回对应字段-->
+,menu_id.id as menu_id_id1 
+,menu_id.name as menu_id_name1 
+,menu_id.menu_icon as menu_id_menu_icon1 
+,menu_id.index_page as menu_id_index_page1 
+,menu_id.create_time as menu_id_create_time1 
+,child_menu_id.id as child_menu_id_id1 
+,child_menu_id.name as child_menu_id_name1 
+,child_menu_id.menu_icon as child_menu_id_menu_icon1 
+,child_menu_id.menu_href as child_menu_id_menu_href1 
+,child_menu_id.index_page as child_menu_id_index_page1 
+,child_menu_id.menu_id as child_menu_id_menu_id1 
+,child_menu_id.create_time as child_menu_id_create_time1 
+,sys_user_id.id as sys_user_id_id1 
+,sys_user_id.USERNAME as sys_user_id_USERNAME1 
+,sys_user_id.PASSWORD as sys_user_id_PASSWORD1 
+,sys_user_id.NAME as sys_user_id_NAME1 
+,sys_user_id.role_manage_id as sys_user_id_role_manage_id1 
+,sys_user_id.create_time as sys_user_id_create_time1 
+,sys_user_id.update_time as sys_user_id_update_time1 
+,sys_user_id.signature as sys_user_id_signature1 
+,role_manage_id.id as role_manage_id_id1 
+,role_manage_id.role_name as role_manage_id_role_name1 
+FROM permission_menu su
+<!--向左关联查询-->
+left join menu menu_id on menu_id.id=su.menu_id
+left join child_menu child_menu_id on child_menu_id.id=su.child_menu_id
+left join sys_user sys_user_id on sys_user_id.id=su.sys_user_id
+left join role_manage role_manage_id on role_manage_id.id=su.role_manage_id
+where 1 = 1
+ <if test="pd.id != null and pd.id !=''"> and su.id = #{pd.id}  </if>
+ <if test="pd.menu_id != null and pd.menu_id !=''"> and su.menu_id = #{pd.menu_id}  </if>
+ <if test="pd.child_menu_id != null and pd.child_menu_id !=''"> and su.child_menu_id = #{pd.child_menu_id}  </if>
+ <if test="pd.name_add != null and pd.name_add !=''"> and su.name_add = #{pd.name_add}  </if>
+ <if test="pd.name_edit != null and pd.name_edit !=''"> and su.name_edit = #{pd.name_edit}  </if>
+ <if test="pd.name_delete != null and pd.name_delete !=''"> and su.name_delete = #{pd.name_delete}  </if>
+ <if test="pd.name_query != null and pd.name_query !=''"> and su.name_query = #{pd.name_query}  </if>
+ <if test="pd.sys_user_id != null and pd.sys_user_id !=''"> and su.sys_user_id = #{pd.sys_user_id}  </if>
+ <if test="pd.role_manage_id != null and pd.role_manage_id !=''"> and su.role_manage_id = #{pd.role_manage_id}  </if>
+ <if test="pd.create_time != null and pd.create_time !=''"> and su.create_time = #{pd.create_time}  </if>
+</select>
+</mapper>

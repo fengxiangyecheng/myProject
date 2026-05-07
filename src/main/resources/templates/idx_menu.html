@@ -1,0 +1,304 @@
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--系统菜单界面-->
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0"
+          name="viewport">
+    <title>系统菜单</title>
+    <link href="../static/img/favicon.jpg" rel="shortcut icon">
+    <!--css资源引用-->
+    <link href="../static/element-ui/lib/theme-chalk/index.css" rel="stylesheet">
+    <link href="../static/css/common.css" rel="stylesheet">
+    <!--js资源引用-->
+    <script type="text/javascript">
+        var html = document.getElementsByTagName("html")[0];
+        var w = document.documentElement.clientWidth || document.body.clientWidth;
+        html.style.fontSize = w / 1366 + "px";
+    </script>
+    <script src="../static/js/vue.js"></script>
+    <script src="../static/element-ui/lib/index.js"></script>
+    <script src="../static/js/jquery-2.2.3.min.js"></script>
+    <script src="../static/js/elementUI_icon.js"></script>
+    <!--验证规则-->
+    <script src="../static/js/elementui_validator.js"></script>
+    <!--富文本资源文件-->
+    <script charset="utf-8" src="../static/ueditor.config.js" type="text/javascript"></script>
+    <script charset="utf-8" src="../static/ueditor.all.min.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="cus_IndexApp" v-cloak>
+    <!--顶部搜索区功能按钮-->
+    <div class="admin-page-toolbar">
+        <el-button @click="add" class="table-button-add" icon="el-icon-circle-plus-outline" size="mini" v-if="name_add">
+            新增
+        </el-button>
+        <el-button @click="handleCurrentChange(1)" class="table-button-search" icon="el-icon-search" size="mini"
+                   v-if="name_query">搜索
+        </el-button>
+    </div>
+    <!--列表数据展示区-->
+    <div class="cusMTable">
+        <el-table :data="cusTableLstInit" header-row-class-name="header-row-class-name" stripe style="width: 100%;">
+            <el-table-column
+                    label="主键id"
+                    prop="id">
+            </el-table-column>
+            <el-table-column
+                    label="菜单名称"
+                    prop="name">
+            </el-table-column>
+            <el-table-column
+                    label="菜单图标"
+                    prop="menu_icon">
+                <
+                <template slot-scope="scope">
+                    <i :class="scope.row.menu_icon"></i>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    label="序号"
+                    prop="index_page">
+            </el-table-column>
+            <el-table-column
+                    label="创建时间"
+                    prop="create_time">
+            </el-table-column>
+            <el-table-column fixed="right" label="操作" min-width="190" width="230">
+                <template slot-scope="scope">
+                    <div class="operation-buttons">
+                        <el-button @click="view(scope.row)" class="table-button-view operation-btn" icon="el-icon-view" size="mini">
+                            查看
+                        </el-button>
+                        <el-button @click="edit(scope.row)" class="table-button-edit operation-btn" icon="el-icon-edit" size="mini"
+                                   v-if="name_edit">编辑
+                        </el-button>
+                        <el-button @click="del(scope.row)" class="table-button-delete operation-btn" icon="el-icon-delete" size="mini"
+                                   v-if="name_delete">删除
+                        </el-button>
+                    </div>
+                </template>
+            </el-table-column>
+        </el-table>
+        <div style="text-align:right;">
+            <el-pagination :current-page="pageInit.currentPage" :page-size="10" :total="pageInit.totalResult"
+                           @current-change="handleCurrentChange" layout="total, prev, pager, next, jumper">
+            </el-pagination>
+        </div>
+    </div>
+    <!--新增、编辑、详情dialog界面-->
+    <el-dialog :title="titleName" :visible.sync="addNewCustomer" top="5vh" width="60%">
+        <el-form :disabled="viewDisabled" :model="ruleForm" :rules="rules" class="demo-ruleForm" label-width="100px"
+                 ref="ruleForm">
+            <el-form-item label="菜单名称" prop="name">
+                <el-input v-model="ruleForm.name"></el-input>
+            </el-form-item>
+            <el-form-item label="菜单图标" prop="menu_icon">
+                <div style="display: flex;">
+                    <div><i :class="ruleForm.menu_icon" style="font-size: 30px;"></i></div>
+                    <el-select filterable placeholder="菜单图标" v-model="ruleForm.menu_icon">
+                        <el-option
+                                :key="index"
+                                :label="item"
+                                :value="item"
+                                v-for="(item,index) in iconList">
+                            <i :class="item" style="float: left"></i>
+                            <span style="float: right; color: #8492a6; font-size: 12px">{{ item }}</span>
+                        </el-option>
+                    </el-select>
+                </div>
+            </el-form-item>
+            <el-form-item label="序号" prop="index_page">
+                <el-input v-model="ruleForm.index_page"></el-input>
+            </el-form-item>
+            <el-form-item v-if="!viewDisabled">
+                <el-button @click="submitForm" style="margin-left:35%" type="primary">立即保存</el-button>
+            </el-form-item>
+        </el-form>
+    </el-dialog>
+</div>
+</body>
+<script th:inline="javascript">
+    var test_detailsue = null;
+    var test_detailsue;
+    var ue = null;
+    var basePath = "/" + window.location.pathname.split("/")[1];
+    let app = window.parent.App;
+    <!--使用vue-->
+    new Vue({
+        el: "#cus_IndexApp",
+        <!--初始化 data -->
+        data() {
+            return {
+                pageInit: {
+                    currentPage: 1,
+                },
+                cusTableLstInit: [],
+                soMoreUserIpt: {},
+                addNewCustomer: false,
+                ruleForm: {},
+                rules: {
+                    id: [
+                        {required: false, message: '请填写主键id', trigger: 'blur'}
+                    ],
+                    name: [
+                        {required: false, message: '请填写菜单名称', trigger: 'blur'}
+                    ],
+                    menu_icon: [
+                        {required: false, message: '请填写菜单图标', trigger: 'change'}
+                    ],
+                    index_page: [
+                        {required: false, message: '请填写序号', trigger: 'blur'}
+                    ],
+                    create_time: [
+                        {required: false, message: '请填写创建时间', trigger: 'blur'}
+                    ],
+                },
+                viewDisabled: false,
+                titleName: "新增",
+                classOptions: [],
+                userObj: [],
+                name_add: false,//新增权限
+                name_edit: false,//编辑权限
+                name_delete: false,//删除权限
+                name_query: false,//查询权限
+                tenantList: [],
+                uploadUrl: basePath,
+                iconList: iconList,
+            }
+        },
+        <!--初始化 mounted -->
+        mounted() {
+            this.userObj = JSON.parse(localStorage.getItem("userInfo"));
+            this.getUserBtnList(this.userObj.role_manage_id);//调用获取权限按钮
+            this.handleCurrentChange(1);
+        },
+        <!--初始化 methods -->
+        methods: {
+//获取权限按钮方法
+            getUserBtnList(role_manage_id) {
+                var pram = new URLSearchParams('?' + window.location.href.split('?')[1]);
+                var child_menu_id = pram.get('child_menu_id');
+                let that = this;
+//ajax发送请求
+                $.ajax({
+                    type: "GET",
+                    url: basePath + "/permission_menu/queryPermission_menuKey",
+                    data: {role_manage_id: role_manage_id, child_menu_id: child_menu_id},
+                    success: function (res) {
+                        let childMenu = res.data[0];
+                        that.name_add = childMenu.name_add == '1'//新增权限
+                        that.name_edit = childMenu.name_edit == '1'//编辑权限
+                        that.name_delete = childMenu.name_delete == '1'//删除权限
+                        that.name_query = childMenu.name_query == '1'//查询权限
+                    }
+                })
+            },
+            windowOpen(url) {
+                window.open(url);
+            },
+            view(row) {
+                this.titleName = "详情";
+                this.ruleForm = row;
+                this.viewDisabled = true;
+                this.addNewCustomer = true;
+            },
+            add() {
+                this.titleName = "新增";
+                this.addNewCustomer = true;
+                this.viewDisabled = false;
+            },
+            edit(row) {
+                this.titleName = "编辑";
+                this.ruleForm = row;
+                this.addNewCustomer = true;
+                this.viewDisabled = false;
+            },
+            submitForm() {
+                let that = this;
+                this.$refs.ruleForm.validate((valid) => {
+                    if (valid) {
+                        if (this.titleName == "新增") {
+                            $.ajax({
+                                type: "POST",
+                                url: basePath + "/menu/addMenuNo",
+                                data: that.ruleForm,
+                                success: function (res) {
+                                    console.log(res);
+                                    if (res.status == 0) {
+                                        that.addNewCustomer = false;
+                                        that.handleCurrentChange(1);
+                                    }
+                                }
+                            })
+                        } else if (this.titleName == "编辑") {
+                            $.ajax({
+                                type: "POST",
+                                url: basePath + "/menu/updateMenu",
+                                data: that.ruleForm,
+                                success: function (res) {
+                                    if (res.status == 0) {
+                                        that.addNewCustomer = false;
+                                        that.handleCurrentChange(1);
+                                    }
+                                }
+                            })
+                        }
+                    } else {
+                        console.log('error submit!!');
+                        return false;
+                    }
+                });
+            },
+            changeSearchFlag() {
+                this.topSearchFlag = false;
+            },
+            handleCurrentChange(val) {
+                this.loading = true;
+                this.soMoreUserIpt.currentPage = val;
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/menu/queryPageMenuKeyList`,
+                    data: that.soMoreUserIpt,
+                    success: function (data) {
+                        that.cusTableLstInit = data.rows;
+                        that.pageInit.totalResult = data.total;
+                        that.pageInit.currentPage = val;
+                        that.loading = false;
+                    }
+                })
+            },
+            del(row) {
+                var that = this;
+                that.$confirm("确认删除该信息!", "提示", {
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    type: "warning"
+                }).then(() => {
+                    $.ajax({
+                        type: "GET",
+                        url: `${basePath}/menu/deleteMenu`,
+                        data: {id: row.id},
+                        success: function (data) {
+                            if (data.status == 0) {
+                                that.$message({
+                                    type: "success",
+                                    message: "删除成功"
+                                });
+                                that.handleCurrentChange(1);
+                            }
+                        }
+                    })
+                }).catch(() => {
+                    this.$message({
+                        type: "info",
+                        message: "已取消删除"
+                    });
+                });
+            },
+        }
+    })
+</script>
+</html>
+

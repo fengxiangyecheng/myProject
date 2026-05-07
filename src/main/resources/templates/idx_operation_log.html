@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0" name="viewport">
+    <title>操作日志</title>
+    <link href="../static/img/favicon.jpg" rel="shortcut icon">
+    <link href="../static/element-ui/lib/theme-chalk/index.css" rel="stylesheet">
+    <link href="../static/css/common.css" rel="stylesheet">
+    <script type="text/javascript">
+        var html = document.getElementsByTagName("html")[0];
+        var w = document.documentElement.clientWidth || document.body.clientWidth;
+        html.style.fontSize = w / 1366 + "px";
+    </script>
+    <script src="../static/js/vue.js"></script>
+    <script src="../static/element-ui/lib/index.js"></script>
+    <script src="../static/js/jquery-2.2.3.min.js"></script>
+</head>
+<body>
+<div id="logApp" v-cloak>
+    <div class="admin-page-toolbar">
+        <el-input class="top_divR" size="mini" clearable placeholder="用户名" v-model="soMoreUserIpt.username" style="width:160px;"></el-input>
+        <el-input class="top_divR" size="mini" clearable placeholder="动作" v-model="soMoreUserIpt.action" style="width:160px;"></el-input>
+        <el-button size="mini" class="table-button-search" icon="el-icon-search" @click="handleCurrentChange(1)">搜索</el-button>
+    </div>
+    <div class="cusMTable">
+        <el-alert v-if="!isSysAdmin" title="仅系统管理员（角色ID=1）可查看操作日志" type="warning" show-icon :closable="false" style="margin-bottom:12px;"></el-alert>
+        <el-table :data="rows" stripe header-row-class-name="header-row-class-name" style="width:100%;">
+            <el-table-column prop="id" label="ID" width="70"></el-table-column>
+            <el-table-column prop="username" label="用户" width="120"></el-table-column>
+            <el-table-column prop="action" label="动作" width="140"></el-table-column>
+            <el-table-column prop="detail" label="详情" show-overflow-tooltip></el-table-column>
+            <el-table-column prop="ip" label="IP" width="130"></el-table-column>
+            <el-table-column prop="create_time" label="时间" width="170"></el-table-column>
+        </el-table>
+        <div style="text-align:right;margin-top:8px;">
+            <el-pagination :current-page="pageInit.currentPage" :page-size="10" :total="pageInit.totalResult"
+                           @current-change="handleCurrentChange" layout="total, prev, pager, next, jumper"></el-pagination>
+        </div>
+    </div>
+</div>
+</body>
+<script th:inline="javascript">
+    var basePath = "/" + window.location.pathname.split("/")[1];
+    new Vue({
+        el: "#logApp",
+        data() {
+            return {
+                pageInit: {currentPage: 1, totalResult: 0},
+                rows: [],
+                soMoreUserIpt: {},
+                isSysAdmin: false,
+            }
+        },
+        mounted() {
+            var u = JSON.parse(localStorage.getItem("userInfo") || "{}");
+            this.isSysAdmin = String(u.role_manage_id) === '1';
+            this.handleCurrentChange(1);
+        },
+        methods: {
+            handleCurrentChange(val) {
+                this.soMoreUserIpt.currentPage = val;
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: basePath + "/sys_operation_log/queryPageLogList",
+                    data: that.soMoreUserIpt,
+                    success: function (data) {
+                        that.rows = data.rows || [];
+                        that.pageInit.totalResult = data.total || 0;
+                        that.pageInit.currentPage = val;
+                    }
+                })
+            },
+        }
+    })
+</script>
+</html>

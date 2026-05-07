@@ -1,0 +1,834 @@
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--团队协作日程管理界面-->
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
+    <title>团队协作日程管理</title>
+    <link rel="shortcut icon" href="../static/img/favicon.jpg">
+    <!--css资源引用-->
+    <link rel="stylesheet" href="../static/element-ui/lib/theme-chalk/index.css">
+    <link rel="stylesheet" href="../static/css/common.css">
+    <!--js资源引用-->
+    <script type="text/javascript">
+        var html = document.getElementsByTagName("html")[0];
+        var w = document.documentElement.clientWidth || document.body.clientWidth;
+        html.style.fontSize = w / 1366 + "px";
+    </script>
+    <script src="../static/js/vue.js"></script>
+    <script src="../static/element-ui/lib/index.js"></script>
+    <script src="../static/js/jquery-2.2.3.min.js"></script>
+    <script src="../static/js/elementUI_icon.js"></script>
+    <!--验证规则-->
+    <script src="../static/js/elementui_validator.js"></script>
+    <!--富文本资源文件-->
+    <script type="text/javascript" charset="utf-8" src="../static/ueditor.config.js"></script>
+    <script type="text/javascript" charset="utf-8" src="../static/ueditor.all.min.js"></script>
+</head>
+<body>
+<div id="cus_IndexApp" v-cloak>
+    <!--顶部搜索区功能按钮-->
+    <div class="admin-page-toolbar">
+        <el-button size="mini" @click="add" v-if="name_add" icon="el-icon-circle-plus-outline" class="table-button-add">
+            新增
+        </el-button>
+        <el-select placeholder="请选择团队ID" v-model="soMoreUserIpt.team_id" size="mini" class="top_divR" clearable>
+            <el-option
+                    v-for="item in classOptionsteam_id"
+                    :key="item.id"
+                    :label="item.team_name"
+                    :value="item.id">
+            </el-option>
+        </el-select>
+        <el-select placeholder="请选择创建人ID" v-model="soMoreUserIpt.creator_id" size="mini" class="top_divR"
+                   clearable>
+            <el-option
+                    v-for="item in classOptionscreator_id"
+                    :key="item.id"
+                    :label="item.USERNAME"
+                    :value="item.id">
+            </el-option>
+        </el-select>
+        <el-select placeholder="可见范围" v-model="soMoreUserIpt.visibility_type" size="mini" class="top_divR" clearable>
+            <el-option label="全体成员" value="1"></el-option>
+            <el-option label="指定成员" value="2"></el-option>
+        </el-select>
+        <el-button size="mini" @click="handleCurrentChange(1)" v-if="name_query" icon="el-icon-search"
+                   class="table-button-search">搜索
+        </el-button>
+    </div>
+    <el-card shadow="never" style="margin: 10px 0;">
+        <div slot="header" style="display:flex;justify-content:space-between;align-items:center;">
+            <div>
+                <span>团队统计面板</span>
+                <div style="font-size:12px;color:#909399;margin-top:4px;font-weight:normal;">
+                    统计范围为<strong>当前筛选条件下的全部日程</strong>（不分页）；{{dashboardHintText()}}
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+                <el-radio-group v-model="dashboardMode" size="mini" @change="loadTeamDashboardStats">
+                    <el-radio-button label="risk_top15">风险Top15</el-radio-button>
+                    <el-radio-button label="all">全部日程</el-radio-button>
+                </el-radio-group>
+                <el-button size="mini" type="primary" plain @click="loadTeamDashboardStats">刷新统计图</el-button>
+            </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+            <el-tag type="info">日程数：{{teamStats.scheduleCount}}</el-tag>
+            <el-tag type="success">任务总数：{{teamStats.taskTotal}}</el-tag>
+            <el-tag>完成率：{{teamStats.completionRate}}%</el-tag>
+            <el-tag type="danger">逾期率：{{teamStats.overdueRate}}%</el-tag>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <div id="teamTaskStatusChart" style="flex:1 1 320px;height:280px;min-width:320px;"></div>
+            <div id="teamScheduleRateChart" style="flex:1 1 420px;height:280px;min-width:360px;"></div>
+        </div>
+    </el-card>
+    <!--列表数据展示区-->
+    <div class="cusMTable">
+        <el-table :data="cusTableLstInit" style="width: 100%;" stripe header-row-class-name="header-row-class-name">
+            <el-table-column
+                    prop="id"
+                    label="主键id">
+            </el-table-column>
+            <el-table-column
+                    prop="team_id"
+                    label="团队ID">
+                <template slot-scope="scope">
+                    <el-tag type="success">{{scope.row.team_id_team_name1}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    prop="title"
+                    label="日程标题">
+            </el-table-column>
+            <el-table-column
+                    prop="start_time"
+                    label="开始时间">
+            </el-table-column>
+            <el-table-column
+                    prop="end_time"
+                    label="结束时间">
+            </el-table-column>
+            <el-table-column
+                    prop="creator_id"
+                    label="创建人ID">
+                <template slot-scope="scope">
+                    <el-tag type="success">{{scope.row.creator_id_USERNAME1}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column prop="leader_user_name1" label="负责人"></el-table-column>
+            <el-table-column prop="visibility_type_name1" label="可见范围"></el-table-column>
+            <el-table-column prop="member_user_names1" label="参与成员"></el-table-column>
+            <el-table-column label="完成进度" min-width="130">
+                <template slot-scope="scope">
+                    <el-tag type="success">{{progressText(scope.row)}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    prop="status"
+                    label="状态">
+                <template slot-scope="scope">
+                    <el-tag type="info" v-if="scope.row.status=='1'">未开始</el-tag>
+                    <el-tag type="warning" v-else-if="scope.row.status=='2'">进行中</el-tag>
+                    <el-tag type="success" v-else-if="scope.row.status=='3'">已完成</el-tag>
+                    <el-tag type="danger" v-else-if="scope.row.status=='4'">已取消</el-tag>
+                    <el-tag type="info" v-else>{{scope.row.status || '—'}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    prop="create_time"
+                    label="创建时间">
+            </el-table-column>
+            <el-table-column
+                    prop="update_time"
+                    label="更新时间">
+            </el-table-column>
+            <el-table-column fixed="right" label="操作" min-width="360" width="420">
+                <template slot-scope="scope">
+                    <div class="operation-buttons">
+                        <el-button @click="view(scope.row)" class="table-button-view operation-btn" icon="el-icon-view" size="mini">
+                            查看
+                        </el-button>
+                        <el-button @click="edit(scope.row)" class="table-button-edit operation-btn" icon="el-icon-edit" size="mini"
+                                   v-if="name_edit">编辑
+                        </el-button>
+                        <el-button @click="openProgressDialog(scope.row)" class="table-button-view operation-btn" icon="el-icon-data-analysis" size="mini">
+                            进度详情
+                        </el-button>
+                        <el-button @click="openExternalShareDialog(scope.row)" class="table-button-edit operation-btn" icon="el-icon-share" size="mini"
+                                   v-if="name_edit">共享外部
+                        </el-button>
+                        <el-button @click="del(scope.row)" class="table-button-delete operation-btn" icon="el-icon-delete" size="mini"
+                                   v-if="name_delete">删除
+                        </el-button>
+                    </div>
+                </template>
+            </el-table-column>
+        </el-table>
+        <div style="text-align:right;">
+            <el-pagination @current-change="handleCurrentChange" :current-page="pageInit.currentPage" :page-size="10"
+                           layout="total, prev, pager, next, jumper" :total="pageInit.totalResult">
+            </el-pagination>
+        </div>
+    </div>
+    <!--新增、编辑、详情dialog界面-->
+    <el-dialog :title="titleName" :visible.sync="addNewCustomer" width="60%" top="5vh">
+        <el-form :model="ruleForm" ref="ruleForm" label-width="100px" class="demo-ruleForm" :rules="rules"
+                 :disabled="viewDisabled">
+            <el-form-item label="团队ID" prop="team_id">
+                <!--单选框-->
+                <div>
+                    <el-radio-group v-model="ruleForm.team_id" @change="onTeamChange">
+                        <el-radio :label="item.id" v-for="item in classOptionsteam_id" :key="item.id">
+                            {{item.team_name}}
+                        </el-radio>
+                    </el-radio-group>
+                </div>
+            </el-form-item>
+            <el-form-item label="日程标题" prop="title">
+                <el-input v-model="ruleForm.title"></el-input>
+            </el-form-item>
+            <el-form-item label="日程内容" prop="content">
+                <el-input type="textarea" v-model="ruleForm.content" auto></el-input>
+            </el-form-item>
+            <el-form-item label="开始时间" prop="start_time">
+                <el-date-picker
+                        v-model="ruleForm.start_time"
+                        type="date"
+                        placeholder="选择日期"
+                        format="yyyy 年 MM 月 dd 日"
+                        value-format="yyyy-MM-dd">
+                </el-date-picker>
+            </el-form-item>
+            <el-form-item label="结束时间" prop="end_time">
+                <el-date-picker
+                        v-model="ruleForm.end_time"
+                        type="date"
+                        placeholder="选择日期"
+                        format="yyyy 年 MM 月 dd 日"
+                        value-format="yyyy-MM-dd">
+                </el-date-picker>
+            </el-form-item>
+            <el-form-item label="创建人ID" prop="creator_id">
+                <!--下拉框-->
+                <div>
+                    <el-select v-model="ruleForm.creator_id" placeholder="请选择创建人ID">
+                        <el-option v-for="item in classOptionscreator_id" :key="item.id" :label="item.USERNAME"
+                                   :value="item.id"></el-option>
+                    </el-select>
+                </div>
+            </el-form-item>
+            <el-form-item label="负责人" prop="leader_user_id">
+                <el-select v-model="ruleForm.leader_user_id" placeholder="请选择负责人" filterable clearable>
+                    <el-option v-for="item in classOptionsmember_user_id" :key="item.id"
+                               :label="userLabel(item)" :value="String(item.user_id || item.id)"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="可见范围" prop="visibility_type">
+                <el-select v-model="ruleForm.visibility_type" placeholder="请选择可见范围" style="width:100%;">
+                    <el-option label="全体成员" value="1"></el-option>
+                    <el-option label="指定成员" value="2"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="参与成员" prop="member_user_ids" v-if="ruleForm.visibility_type==='2'">
+                <el-select v-model="ruleForm.member_user_ids" multiple filterable clearable placeholder="请选择参与成员"
+                           @remove-tag="onMemberTagRemove" @change="onMembersChange">
+                    <el-option v-for="item in classOptionsmember_user_id" :key="item.id"
+                               :label="userLabel(item)" :value="String(item.user_id || item.id)"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="状态" prop="status">
+                <el-select v-model="ruleForm.status" placeholder="请选择状态" style="width:100%;">
+                    <el-option label="未开始" value="1"></el-option>
+                    <el-option label="进行中" value="2"></el-option>
+                    <el-option label="已完成" value="3"></el-option>
+                    <el-option label="已取消" value="4"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item v-if="!viewDisabled">
+                <el-button type="primary" style="margin-left:35%" @click="submitForm">立即保存</el-button>
+            </el-form-item>
+        </el-form>
+    </el-dialog>
+    <el-dialog title="成员完成情况" :visible.sync="progressDialogVisible" width="60%" top="8vh">
+        <div style="margin-bottom:10px;">
+            <el-tag type="info">总任务：{{progressStats.total_cnt || 0}}</el-tag>
+            <el-tag type="success" style="margin-left:8px;">已完成：{{progressStats.done_cnt || 0}}</el-tag>
+            <el-tag type="warning" style="margin-left:8px;">进行中/未开始：{{progressStats.active_cnt || 0}}</el-tag>
+            <el-tag type="danger" style="margin-left:8px;">逾期：{{progressStats.overdue_cnt || 0}}</el-tag>
+            <el-tag style="margin-left:8px;">完成率：{{progressStats.rate || 0}}%</el-tag>
+        </div>
+        <el-table :data="progressDetails" size="mini" stripe>
+            <el-table-column prop="assignee_name" label="成员"></el-table-column>
+            <el-table-column prop="total_cnt" label="总任务" width="80"></el-table-column>
+            <el-table-column prop="done_cnt" label="已完成" width="80"></el-table-column>
+            <el-table-column prop="active_cnt" label="进行中/未开始" width="120"></el-table-column>
+            <el-table-column prop="overdue_cnt" label="逾期" width="70"></el-table-column>
+            <el-table-column label="完成率" width="90">
+                <template slot-scope="scope">{{scope.row.rate || 0}}%</template>
+            </el-table-column>
+            <el-table-column prop="deadline" label="最近截止"></el-table-column>
+            <el-table-column fixed="right" label="操作" width="100">
+                <template slot-scope="scope">
+                    <el-button type="text" size="mini" @click="urgeMember(scope.row)"
+                               :disabled="Number(scope.row.active_cnt || 0) <= 0">催办</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+    </el-dialog>
+    <el-dialog title="团队日程共享到外部用户" :visible.sync="externalShareDialogVisible" width="40%" top="10vh">
+        <el-form :model="externalShareForm" label-width="100px">
+            <el-form-item label="日程标题">
+                <el-tag type="info">{{externalShareForm.schedule_title || '-'}}</el-tag>
+            </el-form-item>
+            <el-form-item label="外部用户">
+                <el-select v-model="externalShareForm.external_user_ids" multiple filterable clearable placeholder="请选择外部用户" style="width:100%;">
+                    <el-option v-for="u in classOptionsexternal_users" :key="u.id"
+                               :label="u.nickname || u.username || ('用户#'+u.id)" :value="String(u.id)"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="primary" @click="submitExternalShare">立即共享</el-button>
+            </el-form-item>
+        </el-form>
+    </el-dialog>
+</div>
+</body>
+<script th:inline="javascript">
+    var test_detailsue = null;
+    var test_detailsue;
+    var ue = null;
+    var basePath = "/" + window.location.pathname.split("/")[1];
+    let app = window.parent.App;
+    <!--使用vue-->
+    new Vue({
+        el: "#cus_IndexApp",
+        // <!--初始化 data -->
+        data() {
+            return {
+                pageInit: {
+                    currentPage: 1,
+                },
+                cusTableLstInit: [],
+                soMoreUserIpt: {},
+                addNewCustomer: false,
+                ruleForm: {},
+                rules: {
+                    id: [
+                        {required: false, message: '请填写主键id', trigger: 'blur'}
+                    ],
+                    team_id: [
+                        {required: false, message: '请填写团队ID', trigger: 'change'}
+                    ],
+                    title: [
+                        {required: false, message: '请填写日程标题', trigger: 'blur'}
+                    ],
+                    content: [
+                        {required: false, message: '请填写日程内容', trigger: 'blur'}
+                    ],
+                    start_time: [
+                        {required: false, message: '请填写开始时间', trigger: 'change'}
+                    ],
+                    end_time: [
+                        {required: false, message: '请填写结束时间', trigger: 'change'}
+                    ],
+                    creator_id: [
+                        {required: false, message: '请填写创建人ID', trigger: 'change'}
+                    ],
+                    leader_user_id: [
+                        {required: false, message: '请选择负责人', trigger: 'change'}
+                    ],
+                    visibility_type: [
+                        {required: false, message: '请选择可见范围', trigger: 'change'}
+                    ],
+                    member_user_ids: [
+                        {required: false, message: '请选择参与成员', trigger: 'change'}
+                    ],
+                    status: [
+                        {required: false, message: '请填写状态：1未开始 2进行中 3已完成 4已取消', trigger: 'blur'}
+                    ],
+                    create_time: [
+                        {required: false, message: '请填写创建时间', trigger: 'blur'}
+                    ],
+                    update_time: [
+                        {required: false, message: '请填写更新时间', trigger: 'blur'}
+                    ],
+                },
+                viewDisabled: false,
+                titleName: "新增",
+                classOptionsteam_id: [],
+                classOptionscreator_id: [],
+                classOptionsmember_user_id: [],
+                classOptions: [],
+                userObj: [],
+                name_add: false,//新增权限
+                name_edit: false,//编辑权限
+                name_delete: false,//删除权限
+                name_query: false,//查询权限
+                tenantList: [],
+                uploadUrl: basePath,
+                iconList: iconList,
+                progressDialogVisible: false,
+                progressStats: {},
+                progressDetails: [],
+                currentProgressSchedule: {},
+                externalShareDialogVisible: false,
+                externalShareForm: {schedule_id: '', schedule_title: '', external_user_ids: []},
+                classOptionsexternal_users: [],
+                teamStats: {
+                    scheduleCount: 0,
+                    taskTotal: 0,
+                    completionRate: 0,
+                    overdueRate: 0
+                },
+                dashboardMode: 'risk_top15',
+            }
+        },
+        // <!--初始化 mounted -->
+        mounted() {
+            this.userObj = JSON.parse(localStorage.getItem("userInfo"));
+            this.getUserBtnList(this.userObj.role_manage_id);//调用获取权限按钮
+            this.handleCurrentChange(1);
+            this.getClassOptionsteam_id();
+            this.getClassOptionscreator_id();
+        },
+        // <!--初始化 methods -->
+        methods: {
+//获取权限按钮方法
+            getUserBtnList(role_manage_id) {
+                var pram = new URLSearchParams('?' + window.location.href.split('?')[1]);
+                var child_menu_id = pram.get('child_menu_id');
+                let that = this;
+//ajax发送请求
+                $.ajax({
+                    type: "GET",
+                    url: basePath + "/permission_menu/queryPermission_menuKey",
+                    data: {role_manage_id: role_manage_id, child_menu_id: child_menu_id},
+                    success: function (res) {
+                        let childMenu = res.data[0];
+                        that.name_add = childMenu.name_add == '1'//新增权限
+                        that.name_edit = childMenu.name_edit == '1'//编辑权限
+                        that.name_delete = childMenu.name_delete == '1'//删除权限
+                        that.name_query = childMenu.name_query == '1'//查询权限
+                    }
+                })
+            },
+            windowOpen(url) {
+                window.open(url);
+            },
+            view(row) {
+                this.titleName = "详情";
+                this.ruleForm = Object.assign({}, row);
+                this.viewDisabled = true;
+                this.addNewCustomer = true;
+                this.$set(this.ruleForm, 'team_id', Number(row.team_id));
+                this.$set(this.ruleForm, 'creator_id', Number(row.creator_id));
+                this.$set(this.ruleForm, 'leader_user_id', row.leader_user_id ? String(row.leader_user_id) : '');
+                this.$set(this.ruleForm, 'visibility_type', row.visibility_type ? String(row.visibility_type) : '1');
+                this.$set(this.ruleForm, 'member_user_ids', this.normalizeMemberIds(row.member_user_ids1));
+                this.onTeamChange(this.ruleForm.team_id);
+                if (this.ruleForm.status !== undefined && this.ruleForm.status !== null) {
+                    this.$set(this.ruleForm, 'status', String(this.ruleForm.status));
+                }
+            },
+            add() {
+                this.titleName = "新增";
+                this.ruleForm = {status: '1', visibility_type: '1', member_user_ids: [], leader_user_id: ''};
+                this.addNewCustomer = true;
+                this.viewDisabled = false;
+            },
+            edit(row) {
+                this.titleName = "编辑";
+                this.ruleForm = Object.assign({}, row);
+                this.addNewCustomer = true;
+                this.viewDisabled = false;
+                this.$set(this.ruleForm, 'team_id', Number(row.team_id));
+                this.$set(this.ruleForm, 'creator_id', Number(row.creator_id));
+                this.$set(this.ruleForm, 'leader_user_id', row.leader_user_id ? String(row.leader_user_id) : '');
+                this.$set(this.ruleForm, 'visibility_type', row.visibility_type ? String(row.visibility_type) : '1');
+                this.$set(this.ruleForm, 'member_user_ids', this.normalizeMemberIds(row.member_user_ids1));
+                this.onTeamChange(this.ruleForm.team_id);
+                if (this.ruleForm.status !== undefined && this.ruleForm.status !== null) {
+                    this.$set(this.ruleForm, 'status', String(this.ruleForm.status));
+                }
+            },
+            getClassOptionsteam_id() {
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/app_team/queryApp_teamKey`,
+                    // 仅展示已审核通过且启用的团队（未通过的团队不应出现在团队协作日程里）
+                    data: {audit_status: '1', status: '1'},
+                    success: function (data) {
+                        that.classOptionsteam_id = data.data;
+                    }
+                })
+            },
+            onTeamChange(teamId) {
+                let that = this;
+                that.classOptionsmember_user_id = [];
+                if (!teamId) return;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/app_team_user/queryApp_team_userKey`,
+                    data: {team_id: teamId, status: '1'},
+                    success: function (data) {
+                        that.classOptionsmember_user_id = (data && data.data) ? data.data : [];
+                    }
+                })
+            },
+            userLabel(item) {
+                return item.user_id_team_name1 || item.user_id_username1 || item.user_name || item.username || ('用户#' + (item.user_id || item.id));
+            },
+            normalizeMemberIds(v) {
+                if (Array.isArray(v)) {
+                    return v.map(function (x) { return String(x).trim(); }).filter(function (x) { return x !== ''; });
+                }
+                if (v == null || v === '') {
+                    return [];
+                }
+                return String(v).split(',').map(function (x) { return x.trim(); }).filter(function (x) { return x !== ''; });
+            },
+            onMembersChange(val) {
+                var arr = this.normalizeMemberIds(val);
+                // 强制替换新数组引用，确保 el-select 多选标签立即重绘
+                this.$set(this.ruleForm, 'member_user_ids', arr.slice());
+            },
+            onMemberTagRemove(tag) {
+                let arr = this.normalizeMemberIds(this.ruleForm.member_user_ids);
+                let removed = String(tag);
+                arr = arr.filter(function (x) { return String(x) !== removed; });
+                // remove-tag 与内部 v-model 更新存在时序差异，nextTick 再次覆盖确保 UI 即时同步
+                this.$nextTick(() => {
+                    this.$set(this.ruleForm, 'member_user_ids', arr.slice());
+                });
+            },
+            progressText(row) {
+                var total = Number(row.progress_total1 || 0);
+                var done = Number(row.progress_done1 || 0);
+                if (total <= 0) return '0/0 (0%)';
+                var rate = Math.round(done * 1000 / total) / 10;
+                return done + '/' + total + ' (' + rate + '%)';
+            },
+            loadTeamDashboardStats() {
+                var that = this;
+                var p = {};
+                if (that.soMoreUserIpt.team_id != null && that.soMoreUserIpt.team_id !== '') {
+                    p.team_id = that.soMoreUserIpt.team_id;
+                }
+                if (that.soMoreUserIpt.creator_id != null && that.soMoreUserIpt.creator_id !== '') {
+                    p.creator_id = that.soMoreUserIpt.creator_id;
+                }
+                if (that.soMoreUserIpt.visibility_type != null && that.soMoreUserIpt.visibility_type !== '') {
+                    p.visibility_type = that.soMoreUserIpt.visibility_type;
+                }
+                p.rank_mode = that.dashboardMode;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/app_team_schedule/queryTeamScheduleDashboard`,
+                    data: p,
+                    success: function (res) {
+                        if (res.status !== 0 || !res.data) {
+                            that.$message.warning((res && res.msg) ? res.msg : "统计数据加载失败");
+                            return;
+                        }
+                        var d = res.data;
+                        var done = Number(d.doneCnt || 0);
+                        var active = Number(d.activeCnt || 0);
+                        var overdue = Number(d.overdueCnt || 0);
+                        var scheduleCount = Number(d.scheduleCount || 0);
+                        var taskTotal = Number(d.taskTotal || 0);
+                        that.teamStats = {
+                            scheduleCount: scheduleCount,
+                            taskTotal: taskTotal,
+                            completionRate: d.completionRate != null ? Number(d.completionRate) : 0,
+                            overdueRate: d.overdueRate != null ? Number(d.overdueRate) : 0
+                        };
+                        var rateRows = [];
+                        var bd = d.breakdown;
+                        if (bd && bd.length) {
+                            for (var i = 0; i < bd.length; i++) {
+                                var x = bd[i];
+                                rateRows.push({
+                                    title: x.title || ("日程#" + (x.id || i)),
+                                    rate: Number(x.rate || 0)
+                                });
+                            }
+                        }
+                        that.$nextTick(function () {
+                            that.paintTeamCharts(done, active, overdue, rateRows);
+                        });
+                    },
+                    error: function () {
+                        that.$message.error("统计数据请求失败");
+                    }
+                });
+            },
+            paintTeamCharts(done, active, overdue, rateRows) {
+                rateRows = rateRows || [];
+                var left = document.getElementById('teamTaskStatusChart');
+                var right = document.getElementById('teamScheduleRateChart');
+                if (!left || !right) return;
+                var pieTotal = done + active + overdue;
+                var dPct = pieTotal > 0 ? Math.round(done * 1000 / pieTotal) / 10 : 0;
+                var aPct = pieTotal > 0 ? Math.round(active * 1000 / pieTotal) / 10 : 0;
+                var oPct = pieTotal > 0 ? Math.round(overdue * 1000 / pieTotal) / 10 : 0;
+                left.innerHTML = ''
+                    + '<div style="font-weight:600;margin-bottom:8px;">任务状态分布（全部匹配日程）</div>'
+                    + '<div style="display:flex;align-items:center;gap:14px;">'
+                    + '  <div style="width:160px;height:160px;border-radius:50%;background:conic-gradient(#67C23A 0% '+ dPct +'%, #E6A23C '+ dPct +'% '+ (dPct + aPct) +'%, #F56C6C '+ (dPct + aPct) +'% 100%);"></div>'
+                    + '  <div style="font-size:12px;line-height:24px;">'
+                    + '    <div><span style="display:inline-block;width:10px;height:10px;background:#67C23A;border-radius:50%;margin-right:6px;"></span>已完成：'+ done +'（'+ dPct +'%）</div>'
+                    + '    <div><span style="display:inline-block;width:10px;height:10px;background:#E6A23C;border-radius:50%;margin-right:6px;"></span>进行中/未开始：'+ active +'（'+ aPct +'%）</div>'
+                    + '    <div><span style="display:inline-block;width:10px;height:10px;background:#F56C6C;border-radius:50%;margin-right:6px;"></span>逾期：'+ overdue +'（'+ oPct +'%）</div>'
+                    + '  </div>'
+                    + '</div>';
+
+                var esc = function (s) {
+                    return String(s == null ? '' : s)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#39;');
+                };
+                var bars = rateRows.map(function (x) {
+                    var rate = Number(x.rate || 0);
+                    return ''
+                        + '<div style="display:flex;align-items:center;gap:8px;margin:6px 0;">'
+                        + '  <div style="width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:#606266;" title="'+ esc(x.title) +'">'+ esc(x.title) +'</div>'
+                        + '  <div style="flex:1;background:#f2f6fc;height:14px;border-radius:7px;overflow:hidden;">'
+                        + '    <div style="height:14px;background:linear-gradient(90deg,#409EFF,#67C23A);width:'+ Math.max(0, Math.min(100, rate)) +'%;"></div>'
+                        + '  </div>'
+                        + '  <div style="width:48px;text-align:right;font-size:12px;">'+ rate +'%</div>'
+                        + '</div>';
+                }).join('');
+                right.innerHTML = '<div style="font-weight:600;margin-bottom:8px;">' + this.dashboardBarTitle() + '</div>'
+                    + (bars || '<div style="color:#909399;font-size:12px;">暂无数据</div>');
+            },
+            dashboardHintText() {
+                if (this.dashboardMode === 'all') {
+                    return '柱状图展示全部匹配日程的完成率。';
+                }
+                return '柱状图展示完成率最低的至多15条（风险日程榜）。';
+            },
+            dashboardBarTitle() {
+                if (this.dashboardMode === 'all') {
+                    return '各日程完成率（全部匹配日程）';
+                }
+                return '风险日程榜（完成率最低 Top15）';
+            },
+            openProgressDialog(row) {
+                var that = this;
+                that.currentProgressSchedule = row || {};
+                that.progressDialogVisible = true;
+                that.progressStats = {};
+                that.progressDetails = [];
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/app_team_schedule/queryScheduleProgressStats`,
+                    data: {schedule_id: row.id},
+                    success: function (res) {
+                        that.progressStats = (res && res.data) ? res.data : {};
+                    }
+                });
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/app_team_schedule/queryScheduleProgressDetails`,
+                    data: {schedule_id: row.id},
+                    success: function (res) {
+                        that.progressDetails = (res && res.data) ? res.data : [];
+                    }
+                });
+            },
+            urgeMember(memberRow) {
+                let that = this;
+                if (!that.currentProgressSchedule || !that.currentProgressSchedule.id) {
+                    that.$message.error("未找到日程信息");
+                    return;
+                }
+                $.ajax({
+                    type: "POST",
+                    url: `${basePath}/app_team_schedule/urgeScheduleMember`,
+                    data: {
+                        schedule_id: that.currentProgressSchedule.id,
+                        assignee_id: memberRow.assignee_id
+                    },
+                    success: function (res) {
+                        if (res.status === 0) {
+                            that.$message.success(res.msg || "催办成功");
+                        } else {
+                            that.$message.error(res.msg || "催办失败");
+                        }
+                    },
+                    error: function () {
+                        that.$message.error("催办请求失败");
+                    }
+                });
+            },
+            ensureExternalUsersLoaded() {
+                let that = this;
+                if (that.classOptionsexternal_users && that.classOptionsexternal_users.length > 0) {
+                    return;
+                }
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/app_user/queryApp_userKey`,
+                    data: {account_status: '1'},
+                    success: function (res) {
+                        that.classOptionsexternal_users = (res && res.data) ? res.data : [];
+                    }
+                });
+            },
+            openExternalShareDialog(row) {
+                this.ensureExternalUsersLoaded();
+                this.externalShareForm = {
+                    schedule_id: String(row.id),
+                    schedule_title: row.title || '',
+                    external_user_ids: []
+                };
+                this.externalShareDialogVisible = true;
+            },
+            submitExternalShare() {
+                let that = this;
+                var ids = that.externalShareForm.external_user_ids || [];
+                if (!ids.length) {
+                    that.$message.warning("请选择外部用户");
+                    return;
+                }
+                $.ajax({
+                    type: "POST",
+                    url: `${basePath}/app_team_schedule/shareToExternalUsers`,
+                    data: {
+                        schedule_id: that.externalShareForm.schedule_id,
+                        external_user_ids: ids.join(',')
+                    },
+                    success: function (res) {
+                        if (res.status === 0) {
+                            that.$message.success(res.msg || "共享成功");
+                            that.externalShareDialogVisible = false;
+                            that.handleCurrentChange(that.pageInit.currentPage || 1);
+                        } else {
+                            that.$message.error(res.msg || "共享失败");
+                        }
+                    },
+                    error: function () {
+                        that.$message.error("共享请求失败");
+                    }
+                });
+            },
+            getClassOptionscreator_id() {
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/sys_user/querySys_userKey`,
+                    data: {},
+                    success: function (data) {
+                        that.classOptionscreator_id = data.data;
+                    }
+                })
+            },
+            submitForm() {
+                let that = this;
+                this.$refs.ruleForm.validate((valid) => {
+                    if (valid) {
+                        let formData = Object.assign({}, that.ruleForm);
+                        let members = formData.member_user_ids || [];
+                        if (!Array.isArray(members)) {
+                            members = (members ? String(members).split(',') : []);
+                        }
+                        members = members.map(function (x) { return String(x).trim(); }).filter(function (x) { return x !== ''; });
+                        formData.member_user_ids = members.join(',');
+                        if (this.titleName == "新增") {
+                            $.ajax({
+                                type: "POST",
+                                url: basePath + "/app_team_schedule/addApp_team_scheduleNo",
+                                data: formData,
+                                success: function (res) {
+                                    console.log(res);
+                                    if (res.status == 0) {
+                                        that.addNewCustomer = false;
+                                        that.handleCurrentChange(1);
+                                    } else {
+                                        that.$message.error(res.msg || "保存失败");
+                                    }
+                                }
+                            })
+                        } else if (this.titleName == "编辑") {
+                            $.ajax({
+                                type: "POST",
+                                url: basePath + "/app_team_schedule/updateApp_team_schedule",
+                                data: formData,
+                                success: function (res) {
+                                    if (res.status == 0) {
+                                        that.addNewCustomer = false;
+                                        that.handleCurrentChange(1);
+                                    } else {
+                                        that.$message.error(res.msg || "保存失败");
+                                    }
+                                }
+                            })
+                        }
+                    } else {
+                        console.log('error submit!!');
+                        return false;
+                    }
+                });
+            },
+            changeSearchFlag() {
+                this.topSearchFlag = false;
+            },
+            handleCurrentChange(val) {
+                this.loading = true;
+                this.soMoreUserIpt.currentPage = val;
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/app_team_schedule/queryPageApp_team_scheduleKeyList`,
+                    data: that.soMoreUserIpt,
+                    success: function (data) {
+                        that.cusTableLstInit = data.rows;
+                        that.pageInit.totalResult = data.total;
+                        that.pageInit.currentPage = val;
+                        that.$nextTick(function () {
+                            that.loadTeamDashboardStats();
+                        });
+                        that.loading = false;
+                    }
+                })
+            },
+            del(row) {
+                var that = this;
+                that.$confirm("确认删除该信息!", "提示", {
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    type: "warning"
+                }).then(() => {
+                    $.ajax({
+                        type: "GET",
+                        url: `${basePath}/app_team_schedule/deleteApp_team_schedule`,
+                        data: {id: row.id},
+                        success: function (data) {
+                            if (data.status == 0) {
+                                that.$message({
+                                    type: "success",
+                                    message: "删除成功"
+                                });
+                                that.handleCurrentChange(1);
+                            }
+                        }
+                    })
+                }).catch(() => {
+                    this.$message({
+                        type: "info",
+                        message: "已取消删除"
+                    });
+                });
+            },
+        }
+    })
+</script>
+</html>
+

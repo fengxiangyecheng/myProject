@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.testdemo.mapper.App_schedule_commentMapper">
+<!-- 非系统管理员：仅可访问本人为管理员/创建者的团队，或已加入且 status=1 的团队下的日程留言 -->
+<sql id="Comment_Schedule_Team_Scope_NonPage">
+ <if test="login_user_id != null and login_user_id != '' and (role_manage_id == null or role_manage_id == '' or role_manage_id != '1')">
+ and (
+   CAST(schedule_id.team_id AS CHAR) in (
+     SELECT CAST(t.id AS CHAR) FROM app_team t
+     WHERE CAST(t.admin_id AS CHAR)=CAST(#{login_user_id} AS CHAR) OR CAST(t.creator_id AS CHAR)=CAST(#{login_user_id} AS CHAR)
+   )
+   OR CAST(schedule_id.team_id AS CHAR) in (
+     SELECT CAST(tu.team_id AS CHAR) FROM app_team_user tu
+     WHERE CAST(tu.user_id AS CHAR)=CAST(#{login_user_id} AS CHAR) AND CAST(IFNULL(tu.status,'') AS CHAR)='1'
+   )
+ )
+ </if>
+</sql>
+<sql id="Comment_Schedule_Team_Scope_Page">
+ <if test="pd.login_user_id != null and pd.login_user_id != '' and (pd.role_manage_id == null or pd.role_manage_id == '' or pd.role_manage_id != '1')">
+ and (
+   CAST(schedule_id.team_id AS CHAR) in (
+     SELECT CAST(t.id AS CHAR) FROM app_team t
+     WHERE CAST(t.admin_id AS CHAR)=CAST(#{pd.login_user_id} AS CHAR) OR CAST(t.creator_id AS CHAR)=CAST(#{pd.login_user_id} AS CHAR)
+   )
+   OR CAST(schedule_id.team_id AS CHAR) in (
+     SELECT CAST(tu.team_id AS CHAR) FROM app_team_user tu
+     WHERE CAST(tu.user_id AS CHAR)=CAST(#{pd.login_user_id} AS CHAR) AND CAST(IFNULL(tu.status,'') AS CHAR)='1'
+   )
+ )
+ </if>
+</sql>
+<sql id="Base_Column_List">
+su.id id,
+su.schedule_id schedule_id,
+su.user_id user_id,
+su.content content,
+su.parent_id parent_id,
+su.create_time create_time
+</sql>
+<!--在数据不存在的情况下进行添加-->
+<insert id="addApp_schedule_comment" parameterType="pd">
+insert into app_schedule_comment (
+schedule_id,
+user_id,
+content,
+parent_id,
+create_time
+ ) values (
+#{schedule_id},
+#{user_id},
+#{content},
+#{parent_id},
+now()
+) </insert>
+<!--根据id删除数据-->
+<delete id="deleteApp_schedule_commentId" parameterType="pd"  >
+DELETE FROM  app_schedule_comment WHERE id = #{id};
+</delete>
+<!--根据id更新数据-->
+<update id="updateApp_schedule_comment" parameterType="pd"  >
+UPDATE app_schedule_comment  <set>
+
+<if test="schedule_id != null and schedule_id !=''"> schedule_id = #{schedule_id}, </if>
+<if test="user_id != null and user_id !=''"> user_id = #{user_id}, </if>
+<if test="content != null and content !=''"> content = #{content}, </if>
+<if test="parent_id != null and parent_id !=''"> parent_id = #{parent_id}, </if>
+
+</set>
+ WHERE id = #{id}; </update>
+<!--获取数据 不分页-->
+<select id="queryApp_schedule_commentKey" parameterType="pd" resultType="pd" useCache="false">
+SELECT <include refid="Base_Column_List"/> 
+<!--向左关联查询返回对应字段-->
+,schedule_id.id as schedule_id_id1 
+,schedule_id.team_id as schedule_id_team_id1 
+,schedule_id.title as schedule_id_title1 
+,schedule_id.content as schedule_id_content1 
+,schedule_id.start_time as schedule_id_start_time1 
+,schedule_id.end_time as schedule_id_end_time1 
+,schedule_id.creator_id as schedule_id_creator_id1 
+,schedule_id.status as schedule_id_status1 
+,schedule_id.create_time as schedule_id_create_time1 
+,schedule_id.update_time as schedule_id_update_time1 
+,app_u.id as user_id_id1 
+,COALESCE(NULLIF(TRIM(IFNULL(app_u.nickname,'')),''), app_u.username, sys_u.NAME, sys_u.USERNAME, CONCAT('用户ID:', CAST(su.user_id AS CHAR))) as user_id_USERNAME1 
+,parent_su.content as parent_id_content1 
+,COALESCE(NULLIF(TRIM(IFNULL(parent_app_u.nickname,'')),''), parent_app_u.username, parent_sys_u.NAME, parent_sys_u.USERNAME, CONCAT('用户ID:', CAST(parent_su.user_id AS CHAR))) as parent_id_author_name1 
+FROM app_schedule_comment su
+<!--向左关联查询-->
+left join app_team_schedule schedule_id on schedule_id.id=su.schedule_id
+left join app_user app_u on CAST(app_u.id AS CHAR)=TRIM(CAST(IFNULL(su.user_id,'') AS CHAR))
+left join sys_user sys_u on CAST(sys_u.id AS CHAR)=TRIM(CAST(IFNULL(su.user_id,'') AS CHAR))
+left join app_schedule_comment parent_su on CAST(parent_su.id AS CHAR)=TRIM(CAST(IFNULL(su.parent_id,'') AS CHAR)) and TRIM(IFNULL(su.parent_id,'')) not in ('','0')
+left join app_user parent_app_u on CAST(parent_app_u.id AS CHAR)=TRIM(CAST(IFNULL(parent_su.user_id,'') AS CHAR))
+left join sys_user parent_sys_u on CAST(parent_sys_u.id AS CHAR)=TRIM(CAST(IFNULL(parent_su.user_id,'') AS CHAR))
+where 1 = 1
+ <if test="id != null and id != '' "> and su.id = #{id}  </if>
+ <if test="schedule_id != null and schedule_id != '' "> and su.schedule_id = #{schedule_id}  </if>
+ <if test="user_id != null and user_id != '' "> and su.user_id = #{user_id}  </if>
+ <if test="content != null and content != '' "> and su.content = #{content}  </if>
+ <if test="parent_id != null and parent_id != '' "> and su.parent_id = #{parent_id}  </if>
+ <if test="create_time != null and create_time != '' "> and su.create_time = #{create_time}  </if>
+ <include refid="Comment_Schedule_Team_Scope_NonPage"/>
+</select>
+<!--获取用户列表数据 分页-->
+<select id="queryPageApp_schedule_commentKeyList" parameterType="page" resultType="pd" useCache="false">
+SELECT <include refid="Base_Column_List"/> 
+<!--向左关联查询返回对应字段-->
+,schedule_id.id as schedule_id_id1 
+,schedule_id.team_id as schedule_id_team_id1 
+,schedule_id.title as schedule_id_title1 
+,schedule_id.content as schedule_id_content1 
+,schedule_id.start_time as schedule_id_start_time1 
+,schedule_id.end_time as schedule_id_end_time1 
+,schedule_id.creator_id as schedule_id_creator_id1 
+,schedule_id.status as schedule_id_status1 
+,schedule_id.create_time as schedule_id_create_time1 
+,schedule_id.update_time as schedule_id_update_time1 
+,app_u.id as user_id_id1 
+,COALESCE(NULLIF(TRIM(IFNULL(app_u.nickname,'')),''), app_u.username, sys_u.NAME, sys_u.USERNAME, CONCAT('用户ID:', CAST(su.user_id AS CHAR))) as user_id_USERNAME1 
+,parent_su.content as parent_id_content1 
+,COALESCE(NULLIF(TRIM(IFNULL(parent_app_u.nickname,'')),''), parent_app_u.username, parent_sys_u.NAME, parent_sys_u.USERNAME, CONCAT('用户ID:', CAST(parent_su.user_id AS CHAR))) as parent_id_author_name1 
+FROM app_schedule_comment su
+<!--向左关联查询-->
+left join app_team_schedule schedule_id on schedule_id.id=su.schedule_id
+left join app_user app_u on CAST(app_u.id AS CHAR)=TRIM(CAST(IFNULL(su.user_id,'') AS CHAR))
+left join sys_user sys_u on CAST(sys_u.id AS CHAR)=TRIM(CAST(IFNULL(su.user_id,'') AS CHAR))
+left join app_schedule_comment parent_su on CAST(parent_su.id AS CHAR)=TRIM(CAST(IFNULL(su.parent_id,'') AS CHAR)) and TRIM(IFNULL(su.parent_id,'')) not in ('','0')
+left join app_user parent_app_u on CAST(parent_app_u.id AS CHAR)=TRIM(CAST(IFNULL(parent_su.user_id,'') AS CHAR))
+left join sys_user parent_sys_u on CAST(parent_sys_u.id AS CHAR)=TRIM(CAST(IFNULL(parent_su.user_id,'') AS CHAR))
+where 1 = 1
+ <if test="pd.id != null and pd.id !=''"> and su.id = #{pd.id}  </if>
+ <if test="pd.schedule_id != null and pd.schedule_id !=''"> and su.schedule_id = #{pd.schedule_id}  </if>
+ <if test="pd.user_id != null and pd.user_id !=''"> and su.user_id = #{pd.user_id}  </if>
+ <if test="pd.content != null and pd.content !=''"> and su.content = #{pd.content}  </if>
+ <if test="pd.parent_id != null and pd.parent_id !=''"> and su.parent_id = #{pd.parent_id}  </if>
+ <if test="pd.create_time != null and pd.create_time !=''"> and su.create_time = #{pd.create_time}  </if>
+ <include refid="Comment_Schedule_Team_Scope_Page"/>
+</select>
+</mapper>

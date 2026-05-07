@@ -1,0 +1,449 @@
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--用户管理界面-->
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
+    <title>用户管理</title>
+    <link rel="shortcut icon" href="../static/img/favicon.jpg">
+    <!--css资源引用-->
+    <link rel="stylesheet" href="../static/element-ui/lib/theme-chalk/index.css">
+    <link rel="stylesheet" href="../static/css/common.css">
+    <!--js资源引用-->
+    <script type="text/javascript">
+        var html = document.getElementsByTagName("html")[0];
+        var w = document.documentElement.clientWidth || document.body.clientWidth;
+        html.style.fontSize = w / 1366 + "px";
+    </script>
+    <script src="../static/js/vue.js"></script>
+    <script src="../static/element-ui/lib/index.js"></script>
+    <script src="../static/js/jquery-2.2.3.min.js"></script>
+    <script src="../static/js/elementUI_icon.js"></script>
+    <!--验证规则-->
+    <script src="../static/js/elementui_validator.js"></script>
+    <!--富文本资源文件-->
+    <script type="text/javascript" charset="utf-8" src="../static/ueditor.config.js"></script>
+    <script type="text/javascript" charset="utf-8" src="../static/ueditor.all.min.js"></script>
+</head>
+<body>
+<div id="cus_IndexApp" v-cloak>
+    <!--顶部搜索区功能按钮-->
+    <div class="admin-page-toolbar">
+        <el-input v-model="soMoreUserIpt.username" placeholder="用户名" size="mini" clearable class="top_divR" style="width: 120px;margin-right:8px;"></el-input>
+        <el-input v-model="soMoreUserIpt.nickname" placeholder="姓名" size="mini" clearable class="top_divR" style="width: 120px;margin-right:8px;"></el-input>
+        <el-input v-model="soMoreUserIpt.phone" placeholder="手机号" size="mini" clearable class="top_divR" style="width: 140px;margin-right:8px;"></el-input>
+        <el-select v-model="soMoreUserIpt.account_status" placeholder="账号状态" size="mini" clearable class="top_divR" style="width: 120px;margin-right:8px;">
+            <el-option label="正常" value="1"></el-option>
+            <el-option label="已禁用" value="0"></el-option>
+        </el-select>
+        <el-button size="mini" @click="add" v-if="name_add" icon="el-icon-circle-plus-outline" class="table-button-add">
+            新增
+        </el-button>
+        <el-button size="mini" @click="handleCurrentChange(1)" v-if="name_query" icon="el-icon-search"
+                   class="table-button-search">搜索
+        </el-button>
+        <el-button size="mini" @click="resetSearch" v-if="name_query" icon="el-icon-refresh-left">重置</el-button>
+    </div>
+    <!--列表数据展示区-->
+    <div class="cusMTable">
+        <el-table :data="cusTableLstInit" style="width: 100%;" stripe header-row-class-name="header-row-class-name">
+            <el-table-column
+                    prop="id"
+                    label="主键id">
+            </el-table-column>
+            <el-table-column
+                    prop="username"
+                    label="用户名">
+            </el-table-column>
+            <el-table-column
+                    prop="account_status"
+                    label="账号状态"
+                    width="100">
+                <template slot-scope="scope">
+                    <span>{{ String(scope.row.account_status != null ? scope.row.account_status : '1') === '0' ? '已禁用' : '正常' }}</span>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    prop="password"
+                    label="密码">
+                <template slot-scope="scope">
+                    <span>******</span>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    prop="nickname"
+                    label="姓名">
+            </el-table-column>
+            <el-table-column
+                    prop="sex"
+                    label="性别">
+            </el-table-column>
+            <el-table-column
+                    prop="phone"
+                    label="联系方式">
+            </el-table-column>
+            <el-table-column
+                    prop="h_img"
+                    label="头像">
+                <template slot-scope="scope">
+                    <el-image style="width: auto; height: 60px" :src="scope.row.h_img"
+                              :preview-src-list="[scope.row.h_img]"></el-image>
+                </template>
+            </el-table-column>
+            <el-table-column fixed="right" label="操作" min-width="280" width="360">
+                <template slot-scope="scope">
+                    <div class="operation-buttons">
+                        <el-button @click="view(scope.row)" class="table-button-view operation-btn" icon="el-icon-view" size="mini">
+                            查看
+                        </el-button>
+                        <el-button @click="edit(scope.row)" class="table-button-edit operation-btn" icon="el-icon-edit" size="mini"
+                                   v-if="name_edit">编辑
+                        </el-button>
+                        <el-button @click="toggleUserStatus(scope.row)" type="warning" size="mini"
+                                   v-if="name_edit">{{ String(scope.row.account_status != null ? scope.row.account_status : '1') === '0' ? '启用' : '禁用' }}
+                        </el-button>
+                        <el-button @click="resetUserPwd(scope.row)" type="danger" size="mini" plain
+                                   v-if="name_edit">重置密码
+                        </el-button>
+                        <el-button @click="del(scope.row)" class="table-button-delete operation-btn" icon="el-icon-delete" size="mini"
+                                   v-if="name_delete">删除
+                        </el-button>
+                    </div>
+                </template>
+            </el-table-column>
+        </el-table>
+        <div style="text-align:right;">
+            <el-pagination @current-change="handleCurrentChange" :current-page="pageInit.currentPage" :page-size="10"
+                           layout="total, prev, pager, next, jumper" :total="pageInit.totalResult">
+            </el-pagination>
+        </div>
+    </div>
+    <!--新增、编辑、详情dialog界面-->
+    <el-dialog :title="titleName" :visible.sync="addNewCustomer" width="60%" top="5vh">
+        <el-form :model="ruleForm" ref="ruleForm" label-width="100px" class="demo-ruleForm" :rules="rules"
+                 :disabled="viewDisabled">
+            <el-form-item label="用户名" prop="username">
+                <el-input v-model="ruleForm.username"></el-input>
+            </el-form-item>
+            <el-form-item label="密码" prop="password">
+                <el-input v-model="ruleForm.password"></el-input>
+            </el-form-item>
+            <el-form-item label="姓名" prop="nickname">
+                <el-input v-model="ruleForm.nickname"></el-input>
+            </el-form-item>
+            <el-form-item label="性别" prop="sex">
+                <el-input v-model="ruleForm.sex"></el-input>
+            </el-form-item>
+            <el-form-item label="联系方式" prop="phone">
+                <el-input v-model="ruleForm.phone"></el-input>
+            </el-form-item>
+            <el-form-item label="头像" prop="h_img">
+                <el-upload
+                        class="avatar-uploader"
+                        :action=`${uploadUrl}/upload`
+                        :show-file-list="false"
+                        :on-success="handleImgh_imgSuccess">
+                    <img v-if="ruleForm.h_img" :src="ruleForm.h_img" class="avatar">
+                    <i v-else class="el-icon-plus avatar-uploader-icon"></i>
+                </el-upload>
+            </el-form-item>
+            <el-form-item v-if="!viewDisabled">
+                <el-button type="primary" style="margin-left:35%" @click="submitForm">立即保存</el-button>
+            </el-form-item>
+        </el-form>
+    </el-dialog>
+</div>
+</body>
+<script th:inline="javascript">
+    var test_detailsue = null;
+    var test_detailsue;
+    var ue = null;
+    var basePath = "/" + window.location.pathname.split("/")[1];
+    /** jQuery 失败时常把 statusText 设为字面量 "error"，且错误页 HTML 很长；统一抽出可读提示 */
+    function appUserFormatAjaxError(xhr) {
+        var m = xhr.responseJSON && (xhr.responseJSON.msg || xhr.responseJSON.message);
+        if (!m && xhr.responseText) {
+            try {
+                var j = JSON.parse(xhr.responseText);
+                if (j && (j.msg || j.message)) m = j.msg || j.message;
+            } catch (e0) { /* 非 JSON */ }
+            if (!m) {
+                var titleM = xhr.responseText.match(/<title>\s*([^<]+?)\s*<\/title>/i);
+                if (titleM) m = titleM[1].replace(/\s+/g, " ").trim();
+            }
+            if (!m) {
+                var t = xhr.responseText.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+                if (t.length > 0) m = t.length > 800 ? t.substring(0, 800) + "…" : t;
+            }
+        }
+        var st = (xhr.statusText || "").toLowerCase();
+        if (!m || (st === "error" && String(m).toLowerCase() === "error")) {
+            m = "请求失败（HTTP " + (xhr.status || "?") + "），请查看后台日志或联系管理员";
+        }
+        return m;
+    }
+    let app = window.parent.App;
+    <!--使用vue-->
+    new Vue({
+        el: "#cus_IndexApp",
+        <!--初始化 data -->
+        data() {
+            return {
+                pageInit: {
+                    currentPage: 1,
+                },
+                cusTableLstInit: [],
+                soMoreUserIpt: {},
+                addNewCustomer: false,
+                ruleForm: {},
+                rules: {
+                    id: [
+                        {required: false, message: '请填写主键id', trigger: 'blur'}
+                    ],
+                    username: [
+                        {required: false, message: '请填写用户名', trigger: 'blur'}
+                    ],
+                    password: [
+                        {required: false, message: '请填写密码', trigger: 'blur'}
+                    ],
+                    nickname: [
+                        {required: false, message: '请填写姓名', trigger: 'blur'}
+                    ],
+                    sex: [
+                        {required: false, message: '请填写性别', trigger: 'blur'}
+                    ],
+                    phone: [
+                        {required: false, message: '请填写联系方式', trigger: 'blur'}
+                    ],
+                    h_img: [
+                        {required: false, message: '请填写头像', trigger: 'change'}
+                    ],
+                },
+                viewDisabled: false,
+                titleName: "新增",
+                classOptions: [],
+                userObj: [],
+                name_add: false,//新增权限
+                name_edit: false,//编辑权限
+                name_delete: false,//删除权限
+                name_query: false,//查询权限
+                tenantList: [],
+                uploadUrl: basePath,
+                iconList: iconList,
+            }
+        },
+        <!--初始化 mounted -->
+        mounted() {
+            this.userObj = JSON.parse(localStorage.getItem("userInfo"));
+            this.getUserBtnList(this.userObj.role_manage_id);//调用获取权限按钮
+            this.handleCurrentChange(1);
+        },
+        <!--初始化 methods -->
+        methods: {
+//获取权限按钮方法
+            getUserBtnList(role_manage_id) {
+                var pram = new URLSearchParams('?' + window.location.href.split('?')[1]);
+                var child_menu_id = pram.get('child_menu_id');
+                let that = this;
+//ajax发送请求
+                $.ajax({
+                    type: "GET",
+                    url: basePath + "/permission_menu/queryPermission_menuKey",
+                    data: {role_manage_id: role_manage_id, child_menu_id: child_menu_id},
+                    success: function (res) {
+                        let childMenu = res.data[0];
+                        that.name_add = childMenu.name_add == '1'//新增权限
+                        that.name_edit = childMenu.name_edit == '1'//编辑权限
+                        that.name_delete = childMenu.name_delete == '1'//删除权限
+                        that.name_query = childMenu.name_query == '1'//查询权限
+                    }
+                })
+            },
+            handleImgh_imgSuccess(res) {
+                this.ruleForm.h_img = res.path;
+            },
+            windowOpen(url) {
+                window.open(url);
+            },
+            view(row) {
+                this.titleName = "详情";
+                this.ruleForm = row;
+                this.viewDisabled = true;
+                this.addNewCustomer = true;
+            },
+            add() {
+                this.titleName = "新增";
+                this.ruleForm = {h_img: ''};
+                this.addNewCustomer = true;
+                this.viewDisabled = false;
+            },
+            edit(row) {
+                this.titleName = "编辑";
+                this.ruleForm = row;
+                this.addNewCustomer = true;
+                this.viewDisabled = false;
+            },
+            submitForm() {
+                let that = this;
+                this.$refs.ruleForm.validate((valid) => {
+                    if (valid) {
+                        if (this.titleName == "新增") {
+                            $.ajax({
+                                type: "POST",
+                                url: basePath + "/app_user/addApp_userNo",
+                                dataType: "json",
+                                data: JSON.parse(JSON.stringify(that.ruleForm || {})),
+                                success: function (res) {
+                                    if (res.status == 0) {
+                                        that.$message.success(res.msg || "保存成功");
+                                        that.addNewCustomer = false;
+                                        that.handleCurrentChange(that.pageInit.currentPage || 1);
+                                    } else {
+                                        that.$message.error(res.msg || "保存失败");
+                                    }
+                                },
+                                error: function (xhr) {
+                                    that.$message.error(appUserFormatAjaxError(xhr));
+                                }
+                            })
+                        } else if (this.titleName == "编辑") {
+                            $.ajax({
+                                type: "POST",
+                                url: basePath + "/app_user/updateApp_user",
+                                dataType: "json",
+                                data: JSON.parse(JSON.stringify(that.ruleForm || {})),
+                                success: function (res) {
+                                    if (res.status == 0) {
+                                        that.$message.success(res.msg || "保存成功");
+                                        that.addNewCustomer = false;
+                                        that.handleCurrentChange(that.pageInit.currentPage || 1);
+                                    } else {
+                                        that.$message.error(res.msg || "保存失败");
+                                    }
+                                },
+                                error: function (xhr) {
+                                    that.$message.error(appUserFormatAjaxError(xhr));
+                                }
+                            })
+                        }
+                    } else {
+                        console.log('error submit!!');
+                        return false;
+                    }
+                });
+            },
+            changeSearchFlag() {
+                this.topSearchFlag = false;
+            },
+            resetSearch() {
+                this.soMoreUserIpt = {};
+                this.handleCurrentChange(1);
+            },
+            handleCurrentChange(val) {
+                this.loading = true;
+                this.soMoreUserIpt.currentPage = val;
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/app_user/queryPageApp_userKeyList`,
+                    data: that.soMoreUserIpt,
+                    success: function (data) {
+                        if (data.loadError) {
+                            var tip = "列表加载失败：" + data.loadError;
+                            if (/Unknown column|account_status/i.test(data.loadError)) {
+                                tip += "。请对库执行 db/patch_app_user_account_status.sql 后重启服务。";
+                            }
+                            that.$message.error(tip);
+                        }
+                        that.cusTableLstInit = data.rows || [];
+                        that.pageInit.totalResult = data.total;
+                        that.pageInit.currentPage = val;
+                        that.loading = false;
+                    },
+                    error: function (xhr) {
+                        that.loading = false;
+                        that.$message.error(appUserFormatAjaxError(xhr));
+                    }
+                })
+            },
+            toggleUserStatus(row) {
+                let that = this;
+                let cur = String(row.account_status != null ? row.account_status : '1');
+                let next = cur === '0' ? '1' : '0';
+                let tip = next === '0' ? '禁用后该用户无法登录系统，确定？' : '确定启用该账号？';
+                that.$confirm(tip, '提示', {type: 'warning'}).then(() => {
+                    $.ajax({
+                        type: 'POST',
+                        url: basePath + '/app_user/setAccountStatus',
+                        dataType: 'json',
+                        data: {id: row.id, account_status: next},
+                        success: function (res) {
+                            if (res.status === 0) {
+                                that.$message.success(res.msg || '操作成功');
+                                that.handleCurrentChange(that.pageInit.currentPage || 1);
+                            } else {
+                                that.$message.error(res.msg || '操作失败');
+                            }
+                        },
+                        error: function (xhr) {
+                            that.$message.error(appUserFormatAjaxError(xhr));
+                        }
+                    });
+                }).catch(() => {});
+            },
+            resetUserPwd(row) {
+                let that = this;
+                that.$prompt('请输入新密码', '重置密码', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    inputPattern: /.{4,50}/,
+                    inputErrorMessage: '密码长度 4-50 位'
+                }).then(({value}) => {
+                    $.ajax({
+                        type: 'POST',
+                        url: basePath + '/app_user/adminResetPassword',
+                        data: {id: row.id, PASSWORD: value},
+                        success: function (res) {
+                            if (res.status === 0) {
+                                that.$message.success(res.msg || '已重置');
+                            } else {
+                                that.$message.error(res.msg || '重置失败');
+                            }
+                        }
+                    });
+                }).catch(() => {});
+            },
+            del(row) {
+                var that = this;
+                that.$confirm("确认删除该信息!", "提示", {
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    type: "warning"
+                }).then(() => {
+                    $.ajax({
+                        type: "GET",
+                        url: `${basePath}/app_user/deleteApp_user`,
+                        data: {id: row.id},
+                        success: function (data) {
+                            if (data.status == 0) {
+                                that.$message({
+                                    type: "success",
+                                    message: "删除成功"
+                                });
+                                that.handleCurrentChange(1);
+                            }
+                        }
+                    })
+                }).catch(() => {
+                    this.$message({
+                        type: "info",
+                        message: "已取消删除"
+                    });
+                });
+            },
+        }
+    })
+</script>
+</html>
+

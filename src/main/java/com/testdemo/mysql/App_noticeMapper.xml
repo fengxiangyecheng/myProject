@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.testdemo.mapper.App_noticeMapper">
+<sql id="Base_Column_List">
+su.id id,
+su.title title,
+su.content content,
+su.publisher_id publisher_id,
+su.status status,
+su.publish_time publish_time,
+su.update_time update_time
+</sql>
+<!--在数据不存在的情况下进行添加-->
+<insert id="addApp_notice" parameterType="pd">
+insert into app_notice (
+title,
+content,
+publisher_id,
+status,
+publish_time,
+update_time
+ ) values (
+#{title},
+#{content},
+#{publisher_id},
+#{status},
+#{publish_time},
+now()
+) </insert>
+<!--根据id删除数据-->
+<delete id="deleteApp_noticeId" parameterType="pd"  >
+DELETE FROM  app_notice WHERE id = #{id};
+</delete>
+<!--根据id更新数据-->
+<update id="updateApp_notice" parameterType="pd"  >
+UPDATE app_notice  <set>
+
+<if test="title != null and title !=''"> title = #{title}, </if>
+<if test="content != null and content !=''"> content = #{content}, </if>
+<if test="publisher_id != null and publisher_id !=''"> publisher_id = #{publisher_id}, </if>
+<if test="status != null and status !=''"> status = #{status}, </if>
+<if test="publish_time != null and publish_time !=''"> publish_time = #{publish_time}, </if>
+update_time = now(),
+</set>
+ WHERE id = #{id}; </update>
+<!--获取数据 不分页-->
+<select id="queryApp_noticeKey" parameterType="pd" resultType="pd" useCache="false">
+SELECT <include refid="Base_Column_List"/> 
+<!--向左关联查询返回对应字段-->
+,publisher_id.id as publisher_id_id1 
+,publisher_id.USERNAME as publisher_id_USERNAME1 
+,publisher_id.PASSWORD as publisher_id_PASSWORD1 
+,publisher_id.NAME as publisher_id_NAME1 
+,publisher_id.role_manage_id as publisher_id_role_manage_id1 
+,publisher_id.create_time as publisher_id_create_time1 
+,publisher_id.update_time as publisher_id_update_time1 
+,publisher_id.signature as publisher_id_signature1 
+FROM app_notice su
+<!--向左关联查询-->
+left join sys_user publisher_id on publisher_id.id=su.publisher_id
+where 1 = 1
+ <if test="id != null and id != '' "> and su.id = #{id}  </if>
+ <if test="title != null and title != '' "> and su.title = #{title}  </if>
+ <if test="content != null and content != '' "> and su.content = #{content}  </if>
+ <if test="publisher_id != null and publisher_id != '' "> and su.publisher_id = #{publisher_id}  </if>
+ <if test="status != null and status != '' "> and su.status = #{status}  </if>
+ <if test="publish_time != null and publish_time != '' "> and su.publish_time = #{publish_time}  </if>
+ <if test="update_time != null and update_time != '' "> and su.update_time = #{update_time}  </if>
+</select>
+<!--获取用户列表数据 分页-->
+<select id="queryPageApp_noticeKeyList" parameterType="page" resultType="pd" useCache="false">
+SELECT <include refid="Base_Column_List"/> 
+<!--向左关联查询返回对应字段-->
+,publisher_id.id as publisher_id_id1 
+,publisher_id.USERNAME as publisher_id_USERNAME1 
+,publisher_id.PASSWORD as publisher_id_PASSWORD1 
+,publisher_id.NAME as publisher_id_NAME1 
+,publisher_id.role_manage_id as publisher_id_role_manage_id1 
+,publisher_id.create_time as publisher_id_create_time1 
+,publisher_id.update_time as publisher_id_update_time1 
+,publisher_id.signature as publisher_id_signature1 
+FROM app_notice su
+<!--向左关联查询-->
+left join sys_user publisher_id on publisher_id.id=su.publisher_id
+where 1 = 1
+ <if test="pd.id != null and pd.id !=''"> and su.id = #{pd.id}  </if>
+ <if test="pd.title != null and pd.title !=''"> and su.title = #{pd.title}  </if>
+ <if test="pd.content != null and pd.content !=''"> and su.content = #{pd.content}  </if>
+ <if test="pd.publisher_id != null and pd.publisher_id !=''"> and su.publisher_id = #{pd.publisher_id}  </if>
+ <if test="pd.status != null and pd.status !=''"> and su.status = #{pd.status}  </if>
+ <if test="pd.publish_time != null and pd.publish_time !=''"> and su.publish_time = #{pd.publish_time}  </if>
+ <if test="pd.update_time != null and pd.update_time !=''"> and su.update_time = #{pd.update_time}  </if>
+</select>
+</mapper>

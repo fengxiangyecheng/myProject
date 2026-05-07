@@ -1,0 +1,439 @@
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--团队用户关联界面-->
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
+    <title>团队用户关联</title>
+    <link rel="shortcut icon" href="../static/img/favicon.jpg">
+    <!--css资源引用-->
+    <link rel="stylesheet" href="../static/element-ui/lib/theme-chalk/index.css">
+    <link rel="stylesheet" href="../static/css/common.css">
+    <!--js资源引用-->
+    <script type="text/javascript">
+        var html = document.getElementsByTagName("html")[0];
+        var w = document.documentElement.clientWidth || document.body.clientWidth;
+        html.style.fontSize = w / 1366 + "px";
+    </script>
+    <script src="../static/js/vue.js"></script>
+    <script src="../static/element-ui/lib/index.js"></script>
+    <script src="../static/js/jquery-2.2.3.min.js"></script>
+    <script src="../static/js/elementUI_icon.js"></script>
+    <!--验证规则-->
+    <script src="../static/js/elementui_validator.js"></script>
+    <!--富文本资源文件-->
+    <script type="text/javascript" charset="utf-8" src="../static/ueditor.config.js"></script>
+    <script type="text/javascript" charset="utf-8" src="../static/ueditor.all.min.js"></script>
+</head>
+<body>
+<div id="cus_IndexApp" v-cloak>
+    <!--顶部搜索区功能按钮-->
+    <div class="admin-page-toolbar">
+        <el-button size="mini" @click="add" v-if="name_add" icon="el-icon-circle-plus-outline" class="table-button-add">
+            新增
+        </el-button>
+        <el-select placeholder="请选择团队ID" v-model="soMoreUserIpt.team_id" size="mini" class="top_divR" clearable>
+            <el-option
+                    v-for="item in classOptionsteam_id"
+                    :key="item.id"
+                    :label="item.team_name"
+                    :value="item.id">
+            </el-option>
+        </el-select>
+        <el-select placeholder="请选择用户（用户管理）" v-model="soMoreUserIpt.user_id" size="mini" class="top_divR" clearable>
+            <el-option
+                    v-for="item in classOptionsuser_id"
+                    :key="item.id"
+                    :label="(item.nickname || item.username || '') + (item.username ? '（' + item.username + '）' : '')"
+                    :value="item.id">
+            </el-option>
+        </el-select>
+        <el-button size="mini" @click="handleCurrentChange(1)" v-if="name_query" icon="el-icon-search"
+                   class="table-button-search">搜索
+        </el-button>
+    </div>
+    <!--列表数据展示区-->
+    <div class="cusMTable">
+        <el-table :data="cusTableLstInit" style="width: 100%;" stripe header-row-class-name="header-row-class-name">
+            <el-table-column
+                    prop="id"
+                    label="主键id">
+            </el-table-column>
+            <el-table-column
+                    prop="team_id"
+                    label="团队ID">
+                <template slot-scope="scope">
+                    <el-tag type="success">{{scope.row.team_id_team_name1}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    prop="user_id"
+                    label="前台用户">
+                <template slot-scope="scope">
+                    <el-tag type="info">{{scope.row.user_id_team_name1}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    prop="join_type"
+                    label="加入类型">
+                <template slot-scope="scope">
+                    <el-tag type="primary" v-if="String(scope.row.join_type) === '1'">申请加入</el-tag>
+                    <el-tag type="success" v-else-if="String(scope.row.join_type) === '2'">邀请加入</el-tag>
+                    <span v-else>{{ scope.row.join_type }}</span>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    prop="status"
+                    label="状态">
+                <template slot-scope="scope">
+                    <el-tag type="warning" v-if="String(scope.row.status) === '0'">待审核</el-tag>
+                    <el-tag type="success" v-else-if="String(scope.row.status) === '1'">已加入</el-tag>
+                    <el-tag type="danger" v-else-if="String(scope.row.status) === '2'">已拒绝</el-tag>
+                    <span v-else>{{ scope.row.status }}</span>
+                </template>
+            </el-table-column>
+            <el-table-column prop="team_role" label="成员角色">
+                <template slot-scope="scope">
+                    <el-tag type="info" v-if="scope.row.team_role=='2'">子管理员</el-tag>
+                    <el-tag type="success" v-else>普通成员</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    prop="join_time"
+                    label="加入时间">
+            </el-table-column>
+            <el-table-column fixed="right" label="操作" min-width="190" width="230">
+                <template slot-scope="scope">
+                    <div class="operation-buttons">
+                        <el-button @click="view(scope.row)" class="table-button-view operation-btn" icon="el-icon-view" size="mini">
+                            查看
+                        </el-button>
+                        <el-button @click="edit(scope.row)" class="table-button-edit operation-btn" icon="el-icon-edit" size="mini"
+                                   v-if="name_edit">编辑
+                        </el-button>
+                        <el-button @click="del(scope.row)" class="table-button-delete operation-btn" icon="el-icon-delete" size="mini"
+                                   v-if="name_delete">删除
+                        </el-button>
+                    </div>
+                </template>
+            </el-table-column>
+        </el-table>
+        <div style="text-align:right;">
+            <el-pagination @current-change="handleCurrentChange" :current-page="pageInit.currentPage" :page-size="10"
+                           layout="total, prev, pager, next, jumper" :total="pageInit.totalResult">
+            </el-pagination>
+        </div>
+    </div>
+    <!--新增、编辑、详情dialog界面-->
+    <el-dialog :title="titleName" :visible.sync="addNewCustomer" width="60%" top="5vh">
+        <el-form :model="ruleForm" ref="ruleForm" label-width="100px" class="demo-ruleForm" :rules="rules"
+                 :disabled="viewDisabled">
+            <el-form-item label="团队ID" prop="team_id">
+                <!--下拉框-->
+                <div>
+                    <el-select v-model="ruleForm.team_id" placeholder="请选择团队ID">
+                        <el-option v-for="item in classOptionsteam_id" :key="item.id" :label="item.team_name"
+                                   :value="item.id"></el-option>
+                    </el-select>
+                </div>
+            </el-form-item>
+            <el-form-item label="前台用户" prop="user_id">
+                <el-select v-model="ruleForm.user_id" placeholder="请选择用户管理中的账号" filterable clearable>
+                    <el-option v-for="item in MenuListuser_id" :key="item.id"
+                               :label="(item.nickname || item.username || '') + (item.username ? '（' + item.username + '）' : '')"
+                               :value="item.id"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="加入类型" prop="join_type">
+                <el-select v-model="ruleForm.join_type" placeholder="请选择加入类型">
+                    <el-option label="申请加入" value="1"></el-option>
+                    <el-option label="邀请加入" value="2"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="状态" prop="status">
+                <el-select v-model="ruleForm.status" placeholder="请选择状态">
+                    <el-option label="待审核" value="0"></el-option>
+                    <el-option label="已加入" value="1"></el-option>
+                    <el-option label="已拒绝" value="2"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="成员角色" prop="team_role">
+                <el-select v-model="ruleForm.team_role" placeholder="请选择角色">
+                    <el-option label="普通成员" value="1"></el-option>
+                    <el-option label="子管理员" value="2"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="加入时间" prop="join_time">
+                <el-date-picker
+                        v-model="ruleForm.join_time"
+                        type="date"
+                        placeholder="选择日期"
+                        format="yyyy 年 MM 月 dd 日"
+                        value-format="yyyy-MM-dd">
+                </el-date-picker>
+            </el-form-item>
+            <el-form-item v-if="!viewDisabled">
+                <el-button type="primary" style="margin-left:35%" @click="submitForm">立即保存</el-button>
+            </el-form-item>
+        </el-form>
+    </el-dialog>
+</div>
+</body>
+<script th:inline="javascript">
+    var test_detailsue = null;
+    var test_detailsue;
+    var ue = null;
+    var basePath = "/" + window.location.pathname.split("/")[1];
+    let app = window.parent.App;
+    <!--使用vue-->
+    new Vue({
+        el: "#cus_IndexApp",
+        <!--初始化 data -->
+        data() {
+            return {
+                pageInit: {
+                    currentPage: 1,
+                },
+                cusTableLstInit: [],
+                soMoreUserIpt: {},
+                addNewCustomer: false,
+                ruleForm: {},
+                rules: {
+                    id: [
+                        {required: false, message: '请填写主键id', trigger: 'blur'}
+                    ],
+                    team_id: [
+                        {required: false, message: '请填写团队ID', trigger: 'change'}
+                    ],
+                    user_id: [
+                        {required: false, message: '请选择用户管理中的账号', trigger: 'change'}
+                    ],
+                    join_type: [
+                        {required: false, message: '请选择加入类型', trigger: 'change'}
+                    ],
+                    status: [
+                        {required: false, message: '请选择状态', trigger: 'change'}
+                    ],
+                    team_role: [
+                        {required: false, message: '请填写成员角色', trigger: 'change'}
+                    ],
+                    join_time: [
+                        {required: false, message: '请填写加入时间', trigger: 'change'}
+                    ],
+                },
+                viewDisabled: false,
+                titleName: "新增",
+                classOptionsteam_id: [],
+                classOptionsuser_id: [],
+                MenuListuser_id: [],
+                initCheckListuser_id: [],
+                defaultPropsuser_id: {label: 'NAME', value: 'id'},
+                classOptions: [],
+                userObj: [],
+                name_add: false,//新增权限
+                name_edit: false,//编辑权限
+                name_delete: false,//删除权限
+                name_query: false,//查询权限
+                tenantList: [],
+                uploadUrl: basePath,
+                iconList: iconList,
+            }
+        },
+        <!--初始化 mounted -->
+        mounted() {
+            this.userObj = JSON.parse(localStorage.getItem("userInfo"));
+            this.getUserBtnList(this.userObj.role_manage_id);//调用获取权限按钮
+            this.getClassOptionsteam_id();
+            this.getMenuListuser_id();
+            // 页面首进时等筛选组件与会话信息初始化后再拉取列表，避免必须手动点一次“搜索”
+            var that = this;
+            this.$nextTick(function () {
+                setTimeout(function () {
+                    that.handleCurrentChange(1);
+                }, 120);
+            });
+        },
+        <!--初始化 methods -->
+        methods: {
+//获取权限按钮方法
+            getUserBtnList(role_manage_id) {
+                var pram = new URLSearchParams('?' + window.location.href.split('?')[1]);
+                var child_menu_id = pram.get('child_menu_id');
+                let that = this;
+//ajax发送请求
+                $.ajax({
+                    type: "GET",
+                    url: basePath + "/permission_menu/queryPermission_menuKey",
+                    data: {role_manage_id: role_manage_id, child_menu_id: child_menu_id},
+                    success: function (res) {
+                        let childMenu = res.data[0];
+                        that.name_add = childMenu.name_add == '1'//新增权限
+                        that.name_edit = childMenu.name_edit == '1'//编辑权限
+                        that.name_delete = childMenu.name_delete == '1'//删除权限
+                        that.name_query = childMenu.name_query == '1'//查询权限
+                    }
+                })
+            },
+            windowOpen(url) {
+                window.open(url);
+            },
+            view(row) {
+                this.titleName = "详情";
+                this.ruleForm = Object.assign({}, row);
+                this.viewDisabled = true;
+                this.addNewCustomer = true;
+                this.ruleForm.team_id = Number(row.team_id);
+                this.ruleForm.user_id = Number(row.user_id);
+                this.ruleForm.join_type = row.join_type != null && row.join_type !== '' ? String(row.join_type) : '';
+                this.ruleForm.status = row.status != null && row.status !== '' ? String(row.status) : '';
+                this.ruleForm.team_role = row.team_role != null && row.team_role !== '' ? String(row.team_role) : '1';
+            },
+            add() {
+                this.titleName = "新增";
+                this.ruleForm = {join_type: '2', status: '1', team_role: '1'};
+                this.addNewCustomer = true;
+                this.viewDisabled = false;
+            },
+            edit(row) {
+                this.titleName = "编辑";
+                this.ruleForm = Object.assign({}, row);
+                this.addNewCustomer = true;
+                this.viewDisabled = false;
+                this.ruleForm.team_id = Number(row.team_id);
+                this.ruleForm.user_id = Number(row.user_id);
+                this.ruleForm.join_type = row.join_type != null && row.join_type !== '' ? String(row.join_type) : '';
+                this.ruleForm.status = row.status != null && row.status !== '' ? String(row.status) : '';
+                this.ruleForm.team_role = row.team_role != null && row.team_role !== '' ? String(row.team_role) : '1';
+            },
+            getClassOptionsteam_id() {
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/app_team/queryApp_teamKey`,
+                    data: {},
+                    success: function (data) {
+                        that.classOptionsteam_id = data.data;
+                    }
+                })
+            },
+            getMenuListuser_id() {
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/app_user/queryApp_userKey`,
+                    data: {},
+                    success: function (data) {
+                        var rows = (data && data.data) ? data.data : [];
+                        that.classOptionsuser_id = rows;
+                        that.MenuListuser_id = rows;
+                    }
+                })
+            },
+            submitForm() {
+                let that = this;
+                this.$refs.ruleForm.validate((valid) => {
+                    if (valid) {
+                        if (this.titleName == "新增") {
+                            $.ajax({
+                                type: "POST",
+                                url: basePath + "/app_team_user/addApp_team_userNo",
+                                data: that.ruleForm,
+                                dataType: "json",
+                                success: function (res) {
+                                    if (res.status === 0) {
+                                        that.$message.success(res.msg || "保存成功");
+                                        that.addNewCustomer = false;
+                                        that.handleCurrentChange(1);
+                                    } else {
+                                        that.$message.error(res.msg || "保存失败");
+                                    }
+                                },
+                                error: function (xhr) {
+                                    var m = (xhr && xhr.responseJSON && xhr.responseJSON.msg) ? xhr.responseJSON.msg : "网络或登录异常，请重试";
+                                    that.$message.error(m);
+                                }
+                            });
+                        } else if (this.titleName == "编辑") {
+                            $.ajax({
+                                type: "POST",
+                                url: basePath + "/app_team_user/updateApp_team_user",
+                                data: that.ruleForm,
+                                dataType: "json",
+                                success: function (res) {
+                                    if (res.status === 0) {
+                                        that.$message.success(res.msg || "保存成功");
+                                        that.addNewCustomer = false;
+                                        that.handleCurrentChange(1);
+                                    } else {
+                                        that.$message.error(res.msg || "保存失败");
+                                    }
+                                },
+                                error: function (xhr) {
+                                    var m = (xhr && xhr.responseJSON && xhr.responseJSON.msg) ? xhr.responseJSON.msg : "网络或登录异常，请重试";
+                                    that.$message.error(m);
+                                }
+                            });
+                        }
+                    } else {
+                        that.$message.warning("请检查表单必填项");
+                        return false;
+                    }
+                });
+            },
+            changeSearchFlag() {
+                this.topSearchFlag = false;
+            },
+            handleCurrentChange(val) {
+                this.loading = true;
+                this.soMoreUserIpt.currentPage = val;
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/app_team_user/queryPageApp_team_userKeyList`,
+                    data: that.soMoreUserIpt,
+                    success: function (data) {
+                        that.cusTableLstInit = data.rows;
+                        that.pageInit.totalResult = data.total;
+                        that.pageInit.currentPage = val;
+                        that.loading = false;
+                    },
+                    error: function () {
+                        that.loading = false;
+                        that.$message.error("列表加载失败，请刷新后重试");
+                    }
+                })
+            },
+            del(row) {
+                var that = this;
+                that.$confirm("确认删除该信息!", "提示", {
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    type: "warning"
+                }).then(() => {
+                    $.ajax({
+                        type: "GET",
+                        url: `${basePath}/app_team_user/deleteApp_team_user`,
+                        data: {id: row.id},
+                        success: function (data) {
+                            if (data.status == 0) {
+                                that.$message({
+                                    type: "success",
+                                    message: "删除成功"
+                                });
+                                that.handleCurrentChange(1);
+                            }
+                        }
+                    })
+                }).catch(() => {
+                    this.$message({
+                        type: "info",
+                        message: "已取消删除"
+                    });
+                });
+            },
+        }
+    })
+</script>
+</html>
+

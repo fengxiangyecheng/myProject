@@ -1,0 +1,206 @@
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0" name="viewport">
+    <title>日程类型管理</title>
+    <link href="../static/img/favicon.jpg" rel="shortcut icon">
+    <link href="../static/element-ui/lib/theme-chalk/index.css" rel="stylesheet">
+    <link href="../static/css/common.css" rel="stylesheet">
+    <script type="text/javascript">
+        var html = document.getElementsByTagName("html")[0];
+        var w = document.documentElement.clientWidth || document.body.clientWidth;
+        html.style.fontSize = w / 1366 + "px";
+    </script>
+    <script src="../static/js/vue.js"></script>
+    <script src="../static/element-ui/lib/index.js"></script>
+    <script src="../static/js/jquery-2.2.3.min.js"></script>
+    <script src="../static/js/elementUI_icon.js"></script>
+    <script src="../static/js/elementui_validator.js"></script>
+</head>
+<body>
+<div id="cus_IndexApp" v-cloak>
+    <div class="admin-page-toolbar">
+        <el-button @click="add" class="table-button-add" icon="el-icon-circle-plus-outline" size="mini" v-if="name_add">新增</el-button>
+        <el-select class="top_divR" clearable placeholder="状态" size="mini" v-model="soMoreUserIpt.status">
+            <el-option label="启用" value="1"></el-option>
+            <el-option label="停用" value="0"></el-option>
+        </el-select>
+        <el-button @click="handleCurrentChange(1)" class="table-button-search" icon="el-icon-search" size="mini" v-if="name_query">搜索</el-button>
+    </div>
+    <div class="cusMTable">
+        <el-table :data="cusTableLstInit" header-row-class-name="header-row-class-name" stripe style="width: 100%;">
+            <el-table-column label="主键" prop="id" width="70"></el-table-column>
+            <el-table-column label="类型编码" prop="type_code"></el-table-column>
+            <el-table-column label="类型名称" prop="type_name"></el-table-column>
+            <el-table-column label="排序" prop="sort_no" width="80"></el-table-column>
+            <el-table-column label="状态" prop="status" width="90">
+                <template slot-scope="scope">
+                    <el-tag type="success" v-if="scope.row.status=='1'">启用</el-tag>
+                    <el-tag type="info" v-else>停用</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column label="备注" prop="remark" show-overflow-tooltip></el-table-column>
+            <el-table-column fixed="right" label="操作" width="220">
+                <template slot-scope="scope">
+                    <div class="operation-buttons">
+                        <el-button @click="view(scope.row)" class="table-button-view operation-btn" icon="el-icon-view" size="mini">查看</el-button>
+                        <el-button @click="edit(scope.row)" class="table-button-edit operation-btn" icon="el-icon-edit" size="mini" v-if="name_edit">编辑</el-button>
+                        <el-button @click="del(scope.row)" class="table-button-delete operation-btn" icon="el-icon-delete" size="mini" v-if="name_delete">删除</el-button>
+                    </div>
+                </template>
+            </el-table-column>
+        </el-table>
+        <div style="text-align:right;">
+            <el-pagination :current-page="pageInit.currentPage" :page-size="10" :total="pageInit.totalResult"
+                           @current-change="handleCurrentChange" layout="total, prev, pager, next, jumper"></el-pagination>
+        </div>
+    </div>
+    <el-dialog :title="titleName" :visible.sync="addNewCustomer" top="5vh" width="60%">
+        <el-form :disabled="viewDisabled" :model="ruleForm" :rules="rules" class="demo-ruleForm" label-width="100px" ref="ruleForm">
+            <el-form-item label="类型编码" prop="type_code">
+                <el-input v-model="ruleForm.type_code" :disabled="titleName=='编辑'"></el-input>
+            </el-form-item>
+            <el-form-item label="类型名称" prop="type_name">
+                <el-input v-model="ruleForm.type_name"></el-input>
+            </el-form-item>
+            <el-form-item label="排序号" prop="sort_no">
+                <el-input v-model="ruleForm.sort_no" placeholder="数字，越小越靠前"></el-input>
+            </el-form-item>
+            <el-form-item label="状态" prop="status">
+                <el-switch v-model="ruleForm.status" active-value="1" inactive-value="0" active-text="启用" inactive-text="停用"></el-switch>
+            </el-form-item>
+            <el-form-item label="备注" prop="remark">
+                <el-input type="textarea" v-model="ruleForm.remark"></el-input>
+            </el-form-item>
+            <el-form-item v-if="!viewDisabled">
+                <el-button @click="submitForm" style="margin-left:35%" type="primary">立即保存</el-button>
+            </el-form-item>
+        </el-form>
+    </el-dialog>
+</div>
+</body>
+<script th:inline="javascript">
+    var basePath = "/" + window.location.pathname.split("/")[1];
+    new Vue({
+        el: "#cus_IndexApp",
+        data() {
+            return {
+                pageInit: {currentPage: 1},
+                cusTableLstInit: [],
+                soMoreUserIpt: {},
+                addNewCustomer: false,
+                ruleForm: {status: '1', sort_no: '0'},
+                rules: {
+                    type_code: [{required: true, message: '请填写类型编码', trigger: 'blur'}],
+                    type_name: [{required: true, message: '请填写类型名称', trigger: 'blur'}],
+                },
+                viewDisabled: false,
+                titleName: "新增",
+                userObj: {},
+                name_add: false,
+                name_edit: false,
+                name_delete: false,
+                name_query: false,
+            }
+        },
+        mounted() {
+            this.userObj = JSON.parse(localStorage.getItem("userInfo"));
+            this.getUserBtnList(this.userObj.role_manage_id);
+            this.handleCurrentChange(1);
+        },
+        methods: {
+            getUserBtnList(role_manage_id) {
+                var pram = new URLSearchParams('?' + (window.location.href.split('?')[1] || ''));
+                var child_menu_id = pram.get('child_menu_id');
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: basePath + "/permission_menu/queryPermission_menuKey",
+                    data: {role_manage_id: role_manage_id, child_menu_id: child_menu_id},
+                    success: function (res) {
+                        if (!res.data || !res.data[0]) return;
+                        let childMenu = res.data[0];
+                        that.name_add = childMenu.name_add == '1';
+                        that.name_edit = childMenu.name_edit == '1';
+                        that.name_delete = childMenu.name_delete == '1';
+                        that.name_query = childMenu.name_query == '1';
+                    }
+                })
+            },
+            view(row) {
+                this.titleName = "详情";
+                this.ruleForm = Object.assign({}, row);
+                this.viewDisabled = true;
+                this.addNewCustomer = true;
+            },
+            add() {
+                this.titleName = "新增";
+                this.ruleForm = {status: '1', sort_no: '0'};
+                this.addNewCustomer = true;
+                this.viewDisabled = false;
+            },
+            edit(row) {
+                this.titleName = "编辑";
+                this.ruleForm = Object.assign({}, row);
+                this.addNewCustomer = true;
+                this.viewDisabled = false;
+            },
+            submitForm() {
+                let that = this;
+                this.$refs.ruleForm.validate((valid) => {
+                    if (!valid) return false;
+                    let url = this.titleName == "新增"
+                        ? basePath + "/app_schedule_type/addApp_schedule_typeNo"
+                        : basePath + "/app_schedule_type/updateApp_schedule_type";
+                    $.ajax({
+                        type: "POST",
+                        url: url,
+                        data: that.ruleForm,
+                        success: function (res) {
+                            if (res.status == 0) {
+                                that.addNewCustomer = false;
+                                that.handleCurrentChange(1);
+                                that.$message.success('保存成功');
+                            } else {
+                                that.$message.error(res.msg || '失败');
+                            }
+                        }
+                    });
+                });
+            },
+            handleCurrentChange(val) {
+                this.soMoreUserIpt.currentPage = val;
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: basePath + "/app_schedule_type/queryPageApp_schedule_typeKeyList",
+                    data: that.soMoreUserIpt,
+                    success: function (data) {
+                        that.cusTableLstInit = data.rows;
+                        that.pageInit.totalResult = data.total;
+                        that.pageInit.currentPage = val;
+                    }
+                })
+            },
+            del(row) {
+                let that = this;
+                that.$confirm("确认删除该类型?", "提示", {type: "warning"}).then(() => {
+                    $.ajax({
+                        type: "GET",
+                        url: basePath + "/app_schedule_type/deleteApp_schedule_type",
+                        data: {id: row.id},
+                        success: function (data) {
+                            if (data.status == 0) {
+                                that.$message.success("删除成功");
+                                that.handleCurrentChange(1);
+                            }
+                        }
+                    })
+                }).catch(() => {
+                });
+            },
+        }
+    })
+</script>
+</html>

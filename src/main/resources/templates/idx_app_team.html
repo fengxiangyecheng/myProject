@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--团队管理界面-->
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
+    <title>团队管理</title>
+    <link rel="shortcut icon" href="../static/img/favicon.jpg">
+    <!--css资源引用-->
+    <link rel="stylesheet" href="../static/element-ui/lib/theme-chalk/index.css">
+    <link rel="stylesheet" href="../static/css/common.css">
+    <!--js资源引用-->
+    <script type="text/javascript">
+        var html = document.getElementsByTagName("html")[0];
+        var w = document.documentElement.clientWidth || document.body.clientWidth;
+        html.style.fontSize = w / 1366 + "px";
+    </script>
+    <script src="../static/js/vue.js"></script>
+    <script src="../static/element-ui/lib/index.js"></script>
+    <script src="../static/js/jquery-2.2.3.min.js"></script>
+    <script src="../static/js/elementUI_icon.js"></script>
+    <!--验证规则-->
+    <script src="../static/js/elementui_validator.js"></script>
+    <!--富文本资源文件-->
+    <script type="text/javascript" charset="utf-8" src="../static/ueditor.config.js"></script>
+    <script type="text/javascript" charset="utf-8" src="../static/ueditor.all.min.js"></script>
+</head>
+<body>
+<div id="cus_IndexApp" v-cloak>
+    <!--顶部搜索区功能按钮-->
+    <div class="admin-page-toolbar">
+        <el-button size="mini" @click="add" v-if="name_add" icon="el-icon-circle-plus-outline" class="table-button-add">
+            新增
+        </el-button>
+        <el-select placeholder="请选择创建人ID" v-model="soMoreUserIpt.creator_id" size="mini" class="top_divR"
+                   clearable>
+            <el-option
+                    v-for="item in classOptionscreator_id"
+                    :key="item.id"
+                    :label="item.USERNAME"
+                    :value="item.id">
+            </el-option>
+        </el-select>
+        <el-select placeholder="请选择团队管理员ID" v-model="soMoreUserIpt.admin_id" size="mini" class="top_divR"
+                   clearable>
+            <el-option
+                    v-for="item in classOptionsadmin_id"
+                    :key="item.id"
+                    :label="item.USERNAME"
+                    :value="item.id">
+            </el-option>
+        </el-select>
+        <el-select placeholder="审核状态" v-model="soMoreUserIpt.audit_status" size="mini" class="top_divR" clearable>
+            <el-option label="待审核" value="0"></el-option>
+            <el-option label="已通过" value="1"></el-option>
+            <el-option label="已拒绝" value="2"></el-option>
+        </el-select>
+        <el-button size="mini" @click="handleCurrentChange(1)" v-if="name_query" icon="el-icon-search"
+                   class="table-button-search">搜索
+        </el-button>
+    </div>
+    <!--列表数据展示区-->
+    <div class="cusMTable">
+        <el-table :data="cusTableLstInit" style="width: 100%;" stripe header-row-class-name="header-row-class-name">
+            <el-table-column
+                    prop="id"
+                    label="主键id">
+            </el-table-column>
+            <el-table-column
+                    prop="team_name"
+                    label="团队名称">
+            </el-table-column>
+            <el-table-column
+                    prop="creator_id"
+                    label="创建人ID">
+                <template slot-scope="scope">
+                    <el-tag type="success">{{scope.row.creator_id_USERNAME1}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    prop="admin_id"
+                    label="团队管理员ID">
+                <template slot-scope="scope">
+                    <el-tag type="success">{{scope.row.admin_id_USERNAME1}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    prop="status"
+                    label="状态">
+<!--                label="状态：1正常 0解散">-->
+                <template slot-scope="scope">
+                    <el-tag type="success" v-if="scope.row.status=='1'">是</el-tag>
+                    <el-tag type="info" v-else>否</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column prop="audit_status" label="审核" width="100">
+                <template slot-scope="scope">
+                    <el-tag type="warning" v-if="scope.row.audit_status=='0'">待审核</el-tag>
+                    <el-tag type="success" v-else-if="scope.row.audit_status=='1'">已通过</el-tag>
+                    <el-tag type="danger" v-else-if="scope.row.audit_status=='2'">已拒绝</el-tag>
+                    <el-tag type="info" v-else>—</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    prop="create_time"
+                    label="创建时间">
+            </el-table-column>
+            <el-table-column
+                    prop="update_time"
+                    label="更新时间">
+            </el-table-column>
+            <el-table-column fixed="right" label="操作" min-width="240" width="290">
+                <template slot-scope="scope">
+                    <div class="operation-buttons">
+                        <el-button @click="view(scope.row)" class="table-button-view operation-btn" icon="el-icon-view" size="mini">
+                            查看
+                        </el-button>
+                        <el-button @click="edit(scope.row)" class="table-button-edit operation-btn" icon="el-icon-edit" size="mini"
+                                   v-if="name_edit">编辑
+                        </el-button>
+                        <el-button @click="del(scope.row)" class="table-button-delete operation-btn" icon="el-icon-delete" size="mini"
+                                   :disabled="String(scope.row.status)==='0'"
+                                   v-if="name_delete">{{ String(scope.row.status)==='0' ? '已解散' : '解散' }}
+                        </el-button>
+                        <template v-if="isSysAdmin && scope.row.audit_status=='0'">
+                            <el-button size="mini" class="operation-btn" type="success" @click="auditTeam(scope.row,'approve')">通过</el-button>
+                            <el-button size="mini" class="operation-btn" type="danger" @click="auditTeam(scope.row,'reject')">拒绝</el-button>
+                        </template>
+                    </div>
+                </template>
+            </el-table-column>
+        </el-table>
+        <div style="text-align:right;">
+            <el-pagination @current-change="handleCurrentChange" :current-page="pageInit.currentPage" :page-size="10"
+                           layout="total, prev, pager, next, jumper" :total="pageInit.totalResult">
+            </el-pagination>
+        </div>
+    </div>
+    <!--新增、编辑、详情dialog界面-->
+    <el-dialog :title="titleName" :visible.sync="addNewCustomer" width="60%" top="5vh">
+        <el-form :model="ruleForm" ref="ruleForm" label-width="100px" class="demo-ruleForm" :rules="rules"
+                 :disabled="viewDisabled">
+            <el-form-item label="团队名称" prop="team_name">
+                <el-input v-model="ruleForm.team_name"></el-input>
+            </el-form-item>
+            <el-form-item label="创建人ID" prop="creator_id">
+                <!--单选框-->
+                <div>
+                    <el-radio-group v-model="ruleForm.creator_id">
+                        <el-radio :label="item.id" v-for="item in classOptionscreator_id" :key="item.id">
+                            {{item.USERNAME}}
+                        </el-radio>
+                    </el-radio-group>
+                </div>
+            </el-form-item>
+            <el-form-item label="团队管理员ID" prop="admin_id">
+                <!--单选框-->
+                <div>
+                    <el-radio-group v-model="ruleForm.admin_id">
+                        <el-radio :label="item.id" v-for="item in classOptionsadmin_id" :key="item.id">
+                            {{item.USERNAME}}
+                        </el-radio>
+                    </el-radio-group>
+                </div>
+            </el-form-item>
+            <el-form-item label="团队描述" prop="description">
+                <el-input type="textarea" v-model="ruleForm.description" auto></el-input>
+            </el-form-item>
+            <el-form-item label="状态" prop="status">
+<!--                <el-form-item label="状态：1正常 0解散" prop="status">-->
+                <el-switch v-model="ruleForm.status" active-text="启用" inactive-text="禁用" active-value="1"
+                           inactive-value="0" active-color="#67C23A"></el-switch>
+            </el-form-item>
+            <el-form-item v-if="!viewDisabled">
+                <el-button type="primary" style="margin-left:35%" @click="submitForm">立即保存</el-button>
+            </el-form-item>
+        </el-form>
+    </el-dialog>
+</div>
+</body>
+<script th:inline="javascript">
+    var test_detailsue = null;
+    var test_detailsue;
+    var ue = null;
+    var basePath = "/" + window.location.pathname.split("/")[1];
+    let app = window.parent.App;
+    <!--使用vue-->
+    new Vue({
+        el: "#cus_IndexApp",
+        <!--初始化 data -->
+        data() {
+            return {
+                pageInit: {
+                    currentPage: 1,
+                },
+                cusTableLstInit: [],
+                soMoreUserIpt: {},
+                addNewCustomer: false,
+                ruleForm: {},
+                rules: {
+                    id: [
+                        {required: false, message: '请填写主键id', trigger: 'blur'}
+                    ],
+                    team_name: [
+                        {required: false, message: '请填写团队名称', trigger: 'blur'}
+                    ],
+                    creator_id: [
+                        {required: false, message: '请填写创建人ID', trigger: 'change'}
+                    ],
+                    admin_id: [
+                        {required: false, message: '请填写团队管理员ID', trigger: 'change'}
+                    ],
+                    description: [
+                        {required: false, message: '请填写团队描述', trigger: 'blur'}
+                    ],
+                    status: [
+                        {required: false, message: '请填写状态：1正常 0解散', trigger: 'change'}
+                    ],
+                    create_time: [
+                        {required: false, message: '请填写创建时间', trigger: 'blur'}
+                    ],
+                    update_time: [
+                        {required: false, message: '请填写更新时间', trigger: 'blur'}
+                    ],
+                },
+                viewDisabled: false,
+                titleName: "新增",
+                classOptionscreator_id: [],
+                classOptionsadmin_id: [],
+                classOptions: [],
+                userObj: [],
+                name_add: false,//新增权限
+                name_edit: false,//编辑权限
+                name_delete: false,//删除权限
+                name_query: false,//查询权限
+                isSysAdmin: false,
+                tenantList: [],
+                uploadUrl: basePath,
+                iconList: iconList,
+            }
+        },
+        <!--初始化 mounted -->
+        mounted() {
+            this.userObj = JSON.parse(localStorage.getItem("userInfo"));
+            this.isSysAdmin = String(this.userObj.role_manage_id) === '1';
+            this.getUserBtnList(this.userObj.role_manage_id);//调用获取权限按钮
+            this.handleCurrentChange(1);
+            this.getClassOptionscreator_id();
+            this.getClassOptionsadmin_id();
+        },
+        <!--初始化 methods -->
+        methods: {
+//获取权限按钮方法
+            getUserBtnList(role_manage_id) {
+                var pram = new URLSearchParams('?' + window.location.href.split('?')[1]);
+                var child_menu_id = pram.get('child_menu_id');
+                let that = this;
+//ajax发送请求
+                $.ajax({
+                    type: "GET",
+                    url: basePath + "/permission_menu/queryPermission_menuKey",
+                    data: {role_manage_id: role_manage_id, child_menu_id: child_menu_id},
+                    success: function (res) {
+                        let childMenu = res.data[0];
+                        that.name_add = childMenu.name_add == '1'//新增权限
+                        that.name_edit = childMenu.name_edit == '1'//编辑权限
+                        that.name_delete = childMenu.name_delete == '1'//删除权限
+                        that.name_query = childMenu.name_query == '1'//查询权限
+                    }
+                })
+            },
+            windowOpen(url) {
+                window.open(url);
+            },
+            view(row) {
+                this.titleName = "详情";
+                this.ruleForm = Object.assign({}, row);
+                this.viewDisabled = true;
+                this.addNewCustomer = true;
+                this.ruleForm.creator_id = Number(row.creator_id);
+                this.ruleForm.admin_id = Number(row.admin_id);
+            },
+            add() {
+                this.titleName = "新增";
+                this.ruleForm = {status: '1', audit_status: '0', creator_id: '', admin_id: '', description: ''};
+                this.addNewCustomer = true;
+                this.viewDisabled = false;
+            },
+            edit(row) {
+                this.titleName = "编辑";
+                this.ruleForm = Object.assign({}, row);
+                this.addNewCustomer = true;
+                this.viewDisabled = false;
+                this.ruleForm.creator_id = Number(row.creator_id);
+                this.ruleForm.admin_id = Number(row.admin_id);
+            },
+            getClassOptionscreator_id() {
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/sys_user/querySys_userKey`,
+                    data: {},
+                    success: function (data) {
+                        that.classOptionscreator_id = data.data;
+                    }
+                })
+            },
+            getClassOptionsadmin_id() {
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/sys_user/querySys_userKey`,
+                    data: {},
+                    success: function (data) {
+                        that.classOptionsadmin_id = data.data;
+                    }
+                })
+            },
+            submitForm() {
+                let that = this;
+                this.$refs.ruleForm.validate((valid) => {
+                    if (valid) {
+                        if (this.titleName == "新增") {
+                            that.ruleForm.audit_status = '0';
+                            $.ajax({
+                                type: "POST",
+                                url: basePath + "/app_team/addApp_teamNo",
+                                data: that.ruleForm,
+                                success: function (res) {
+                                    console.log(res);
+                                    if (res.status == 0) {
+                                        that.$message.success('新增成功，状态为待审核');
+                                        that.addNewCustomer = false;
+                                        that.handleCurrentChange(1);
+                                    } else {
+                                        that.$message.error(res.msg || '新增失败');
+                                    }
+                                }
+                            })
+                        } else if (this.titleName == "编辑") {
+                            $.ajax({
+                                type: "POST",
+                                url: basePath + "/app_team/updateApp_team",
+                                data: that.ruleForm,
+                                success: function (res) {
+                                    if (res.status == 0) {
+                                        that.$message.success(res.msg || '保存成功');
+                                        that.addNewCustomer = false;
+                                        that.handleCurrentChange(1);
+                                    } else {
+                                        that.$message.error(res.msg || '保存失败');
+                                    }
+                                }
+                            })
+                        }
+                    } else {
+                        console.log('error submit!!');
+                        return false;
+                    }
+                });
+            },
+            changeSearchFlag() {
+                this.topSearchFlag = false;
+            },
+            handleCurrentChange(val) {
+                this.loading = true;
+                this.soMoreUserIpt.currentPage = val;
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/app_team/queryPageApp_teamKeyList`,
+                    data: that.soMoreUserIpt,
+                    success: function (data) {
+                        that.cusTableLstInit = data.rows;
+                        that.pageInit.totalResult = data.total;
+                        that.pageInit.currentPage = val;
+                        that.loading = false;
+                    }
+                })
+            },
+            auditTeam(row, action) {
+                let that = this;
+                $.ajax({
+                    type: "POST",
+                    url: basePath + "/app_team/approveTeamAudit",
+                    data: {id: row.id, audit_action: action},
+                    success: function (res) {
+                        if (res.status == 0) {
+                            that.$message.success('已更新审核状态');
+                            that.handleCurrentChange(that.pageInit.currentPage || 1);
+                        } else {
+                            that.$message.error(res.msg || '失败');
+                        }
+                    }
+                });
+            },
+            del(row) {
+                var that = this;
+                if (String(row.status) === '0') {
+                    that.$message.warning("该团队已解散，无需重复操作");
+                    return;
+                }
+                that.$confirm("确认解散该团队？解散后将停用该团队。", "提示", {
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    type: "warning"
+                }).then(() => {
+                    $.ajax({
+                        type: "GET",
+                        url: `${basePath}/app_team/deleteApp_team`,
+                        data: {id: row.id},
+                        success: function (data) {
+                            if (data.status == 0) {
+                                that.$message({
+                                    type: "success",
+                                    message: data.msg || "团队已解散"
+                                });
+                                that.handleCurrentChange(1);
+                            } else {
+                                that.$message.error(data.msg || "操作失败");
+                            }
+                        }
+                    })
+                }).catch(() => {
+                    this.$message({
+                        type: "info",
+                        message: "已取消删除"
+                    });
+                });
+            },
+        }
+    })
+</script>
+</html>
+

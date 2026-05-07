@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.testdemo.mapper.Sys_system_configMapper">
+    <sql id="Base_Column_List">
+        su.id id,
+        su.config_key config_key,
+        su.config_value config_value,
+        su.remark remark,
+        su.update_time update_time
+    </sql>
+
+    <insert id="addSys_system_config" parameterType="pd">
+        INSERT INTO sys_system_config (config_key, config_value, remark, update_time)
+        VALUES (#{config_key}, #{config_value}, #{remark}, DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s'))
+    </insert>
+
+    <delete id="deleteSys_system_configId" parameterType="pd">
+        DELETE FROM sys_system_config WHERE id = #{id}
+    </delete>
+
+    <update id="updateSys_system_config" parameterType="pd">
+        UPDATE sys_system_config
+        <set>
+            <if test="config_key != null and config_key != ''">config_key = #{config_key},</if>
+            <if test="config_value != null">config_value = #{config_value},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_time = DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s'),
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <select id="querySys_system_configKey" parameterType="pd" resultType="pd" useCache="false">
+        SELECT <include refid="Base_Column_List"/> FROM sys_system_config su WHERE 1 = 1
+        <if test="id != null and id != ''">AND su.id = #{id}</if>
+        <if test="config_key != null and config_key != ''">AND su.config_key = #{config_key}</if>
+        <if test="config_value != null and config_value != ''">AND su.config_value LIKE CONCAT('%',#{config_value},'%')</if>
+        ORDER BY su.id DESC
+    </select>
+
+    <select id="queryPageSys_system_configKeyList" parameterType="page" resultType="pd" useCache="false">
+        SELECT <include refid="Base_Column_List"/> FROM sys_system_config su WHERE 1 = 1
+        <if test="pd.id != null and pd.id != ''">AND su.id = #{pd.id}</if>
+        <if test="pd.config_key != null and pd.config_key != ''">AND su.config_key = #{pd.config_key}</if>
+        <if test="pd.config_value != null and pd.config_value != ''">AND su.config_value LIKE CONCAT('%',#{pd.config_value},'%')</if>
+        ORDER BY su.id DESC
+    </select>
+</mapper>
+

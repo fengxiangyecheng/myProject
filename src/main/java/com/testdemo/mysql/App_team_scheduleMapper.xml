@@ -1,0 +1,376 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.testdemo.mapper.App_team_scheduleMapper">
+<sql id="Base_Column_List">
+su.id id,
+su.team_id team_id,
+su.title title,
+su.content content,
+su.start_time start_time,
+su.end_time end_time,
+su.creator_id creator_id,
+su.leader_user_id leader_user_id,
+su.visibility_type visibility_type,
+su.status status,
+su.create_time create_time,
+su.update_time update_time
+</sql>
+<!--在数据不存在的情况下进行添加-->
+<insert id="addApp_team_schedule" parameterType="pd">
+insert into app_team_schedule (
+team_id,
+title,
+content,
+start_time,
+end_time,
+creator_id,
+leader_user_id,
+visibility_type,
+status,
+create_time,
+update_time
+ ) values (
+#{team_id},
+#{title},
+#{content},
+#{start_time},
+#{end_time},
+#{creator_id},
+#{leader_user_id},
+IFNULL(#{visibility_type},'1'),
+#{status},
+now(),
+now()
+) </insert>
+<select id="queryLastInsertId" resultType="int">
+SELECT LAST_INSERT_ID()
+</select>
+<delete id="deleteScheduleMembersByScheduleId" parameterType="pd">
+DELETE FROM app_team_schedule_member WHERE schedule_id = #{schedule_id}
+</delete>
+<insert id="addScheduleMember" parameterType="pd">
+insert into app_team_schedule_member (
+schedule_id,
+user_id,
+create_time
+) values (
+#{schedule_id},
+#{user_id},
+now()
+)
+</insert>
+<select id="queryScheduleMembersByScheduleId" parameterType="pd" resultType="pd" useCache="false">
+SELECT
+sm.schedule_id schedule_id,
+sm.user_id user_id,
+COALESCE(NULLIF(TRIM(IFNULL(u.nickname,'')),''),u.username,CONCAT('用户#',sm.user_id)) as user_name
+FROM app_team_schedule_member sm
+left join app_user u on CAST(u.id AS CHAR)=CAST(sm.user_id AS CHAR)
+where 1 = 1
+<if test="schedule_id != null and schedule_id != ''"> and sm.schedule_id = #{schedule_id}</if>
+</select>
+<select id="queryScheduleTaskProgressStats" parameterType="pd" resultType="pd" useCache="false">
+SELECT
+COUNT(1) as total_cnt,
+SUM(CASE WHEN CAST(IFNULL(status,'') AS CHAR)='2' THEN 1 ELSE 0 END) as done_cnt,
+SUM(CASE WHEN CAST(IFNULL(status,'') AS CHAR) IN ('0','1') THEN 1 ELSE 0 END) as active_cnt,
+SUM(CASE WHEN CAST(IFNULL(status,'') AS CHAR)='3' THEN 1 ELSE 0 END) as overdue_cnt
+FROM app_schedule_task
+WHERE CAST(schedule_id AS CHAR)=CAST(#{schedule_id} AS CHAR)
+</select>
+<select id="queryScheduleTaskProgressDetails" parameterType="pd" resultType="pd" useCache="false">
+SELECT
+su.assignee_id as assignee_id,
+COALESCE(NULLIF(TRIM(IFNULL(au.nickname,'')),''),au.username,su2.USERNAME,CONCAT('用户#',CAST(su.assignee_id AS CHAR))) as assignee_name,
+COUNT(1) as total_cnt,
+SUM(CASE WHEN CAST(IFNULL(su.status,'') AS CHAR)='2' THEN 1 ELSE 0 END) as done_cnt,
+SUM(CASE WHEN CAST(IFNULL(su.status,'') AS CHAR) IN ('0','1') THEN 1 ELSE 0 END) as active_cnt,
+SUM(CASE WHEN CAST(IFNULL(su.status,'') AS CHAR)='3' THEN 1 ELSE 0 END) as overdue_cnt,
+MAX(su.deadline) as deadline,
+MAX(su.update_time) as update_time
+FROM app_schedule_task su
+left join app_user au on CAST(au.id AS CHAR)=CAST(su.assignee_id AS CHAR)
+left join sys_user su2 on CAST(su2.id AS CHAR)=CAST(su.assignee_id AS CHAR)
+WHERE CAST(su.schedule_id AS CHAR)=CAST(#{schedule_id} AS CHAR)
+GROUP BY su.assignee_id,COALESCE(NULLIF(TRIM(IFNULL(au.nickname,'')),''),au.username,su2.USERNAME,CONCAT('用户#',CAST(su.assignee_id AS CHAR)))
+ORDER BY overdue_cnt DESC,active_cnt DESC,done_cnt ASC,assignee_id ASC
+</select>
+<select id="queryTeamScheduleDashboardAggregate" parameterType="pd" resultType="pd" useCache="false">
+SELECT
+COUNT(DISTINCT su.id) AS schedule_count,
+COALESCE(SUM(IFNULL(ast_agg.cnt,0)),0) AS task_total,
+COALESCE(SUM(IFNULL(ast_agg.done_cnt,0)),0) AS done_cnt,
+COALESCE(SUM(IFNULL(ast_agg.active_cnt,0)),0) AS active_cnt,
+COALESCE(SUM(IFNULL(ast_agg.overdue_cnt,0)),0) AS overdue_cnt
+FROM app_team_schedule su
+LEFT JOIN app_team team_id ON team_id.id=su.team_id
+LEFT JOIN (
+SELECT CAST(schedule_id AS CHAR) sid,
+COUNT(1) cnt,
+SUM(CASE WHEN CAST(IFNULL(status,'') AS CHAR)='2' THEN 1 ELSE 0 END) done_cnt,
+SUM(CASE WHEN CAST(IFNULL(status,'') AS CHAR) IN ('0','1') THEN 1 ELSE 0 END) active_cnt,
+SUM(CASE WHEN CAST(IFNULL(status,'') AS CHAR)='3' THEN 1 ELSE 0 END) overdue_cnt
+FROM app_schedule_task
+GROUP BY CAST(schedule_id AS CHAR)
+) ast_agg ON ast_agg.sid=CAST(su.id AS CHAR)
+WHERE 1 = 1
+AND CAST(IFNULL(team_id.audit_status,'') AS CHAR)='1'
+AND CAST(IFNULL(team_id.status,'') AS CHAR)='1'
+<if test="id != null and id != ''">AND su.id = #{id}</if>
+<if test="team_id != null and team_id != ''">AND su.team_id = #{team_id}</if>
+<if test="title != null and title != ''">AND su.title = #{title}</if>
+<if test="content != null and content != ''">AND su.content = #{content}</if>
+<if test="start_time != null and start_time != ''">AND su.start_time = #{start_time}</if>
+<if test="end_time != null and end_time != ''">AND su.end_time = #{end_time}</if>
+<if test="creator_id != null and creator_id != ''">AND su.creator_id = #{creator_id}</if>
+<if test="leader_user_id != null and leader_user_id != ''">AND su.leader_user_id = #{leader_user_id}</if>
+<if test="visibility_type != null and visibility_type != ''">AND su.visibility_type = #{visibility_type}</if>
+<if test="status != null and status != ''">AND su.status = #{status}</if>
+<if test="create_time != null and create_time != ''">AND su.create_time = #{create_time}</if>
+<if test="update_time != null and update_time != ''">AND su.update_time = #{update_time}</if>
+ <if test="login_user_id != null and login_user_id != '' and (role_manage_id == null or role_manage_id == '' or role_manage_id != '1')">
+ AND (
+   CAST(su.team_id AS CHAR) in (
+     SELECT CAST(t.id AS CHAR) FROM app_team t
+     WHERE CAST(t.admin_id AS CHAR)=CAST(#{login_user_id} AS CHAR) OR CAST(t.creator_id AS CHAR)=CAST(#{login_user_id} AS CHAR)
+   )
+   OR CAST(su.team_id AS CHAR) in (
+     SELECT CAST(tu.team_id AS CHAR) FROM app_team_user tu
+     WHERE CAST(tu.user_id AS CHAR)=CAST(#{login_user_id} AS CHAR) AND CAST(IFNULL(tu.status,'') AS CHAR)='1'
+   )
+ )
+ </if>
+</select>
+<select id="queryTeamScheduleDashboardRates" parameterType="pd" resultType="pd" useCache="false">
+SELECT
+su.id AS id,
+IFNULL(NULLIF(TRIM(su.title),''),CONCAT('日程#',CAST(su.id AS CHAR))) AS title,
+COALESCE(ast_agg.cnt,0) AS progress_total1,
+COALESCE(ast_agg.done_cnt,0) AS progress_done1,
+COALESCE(ast_agg.active_cnt,0) AS progress_active1,
+COALESCE(ast_agg.overdue_cnt,0) AS progress_overdue1
+FROM app_team_schedule su
+LEFT JOIN app_team team_id ON team_id.id=su.team_id
+LEFT JOIN (
+SELECT CAST(schedule_id AS CHAR) sid,
+COUNT(1) cnt,
+SUM(CASE WHEN CAST(IFNULL(status,'') AS CHAR)='2' THEN 1 ELSE 0 END) done_cnt,
+SUM(CASE WHEN CAST(IFNULL(status,'') AS CHAR) IN ('0','1') THEN 1 ELSE 0 END) active_cnt,
+SUM(CASE WHEN CAST(IFNULL(status,'') AS CHAR)='3' THEN 1 ELSE 0 END) overdue_cnt
+FROM app_schedule_task
+GROUP BY CAST(schedule_id AS CHAR)
+) ast_agg ON ast_agg.sid=CAST(su.id AS CHAR)
+WHERE 1 = 1
+AND CAST(IFNULL(team_id.audit_status,'') AS CHAR)='1'
+AND CAST(IFNULL(team_id.status,'') AS CHAR)='1'
+<if test="id != null and id != ''">AND su.id = #{id}</if>
+<if test="team_id != null and team_id != ''">AND su.team_id = #{team_id}</if>
+<if test="title != null and title != ''">AND su.title = #{title}</if>
+<if test="content != null and content != ''">AND su.content = #{content}</if>
+<if test="start_time != null and start_time != ''">AND su.start_time = #{start_time}</if>
+<if test="end_time != null and end_time != ''">AND su.end_time = #{end_time}</if>
+<if test="creator_id != null and creator_id != ''">AND su.creator_id = #{creator_id}</if>
+<if test="leader_user_id != null and leader_user_id != ''">AND su.leader_user_id = #{leader_user_id}</if>
+<if test="visibility_type != null and visibility_type != ''">AND su.visibility_type = #{visibility_type}</if>
+<if test="status != null and status != ''">AND su.status = #{status}</if>
+<if test="create_time != null and create_time != ''">AND su.create_time = #{create_time}</if>
+<if test="update_time != null and update_time != ''">AND su.update_time = #{update_time}</if>
+ <if test="login_user_id != null and login_user_id != '' and (role_manage_id == null or role_manage_id == '' or role_manage_id != '1')">
+ AND (
+   CAST(su.team_id AS CHAR) in (
+     SELECT CAST(t.id AS CHAR) FROM app_team t
+     WHERE CAST(t.admin_id AS CHAR)=CAST(#{login_user_id} AS CHAR) OR CAST(t.creator_id AS CHAR)=CAST(#{login_user_id} AS CHAR)
+   )
+   OR CAST(su.team_id AS CHAR) in (
+     SELECT CAST(tu.team_id AS CHAR) FROM app_team_user tu
+     WHERE CAST(tu.user_id AS CHAR)=CAST(#{login_user_id} AS CHAR) AND CAST(IFNULL(tu.status,'') AS CHAR)='1'
+   )
+ )
+ </if>
+ORDER BY
+CASE WHEN COALESCE(ast_agg.cnt,0)=0 THEN 101 ELSE COALESCE(ast_agg.done_cnt,0)*100.0/ast_agg.cnt END ASC,
+su.id DESC
+<if test="limit_size != null and limit_size != ''">
+LIMIT #{limit_size}
+</if>
+</select>
+<!--根据id删除数据-->
+<delete id="deleteApp_team_scheduleId" parameterType="pd"  >
+DELETE FROM  app_team_schedule WHERE id = #{id};
+</delete>
+<!--根据id更新数据-->
+<update id="updateApp_team_schedule" parameterType="pd"  >
+UPDATE app_team_schedule  <set>
+
+<if test="team_id != null and team_id !=''"> team_id = #{team_id}, </if>
+<if test="title != null and title !=''"> title = #{title}, </if>
+<if test="content != null and content !=''"> content = #{content}, </if>
+<if test="start_time != null and start_time !=''"> start_time = #{start_time}, </if>
+<if test="end_time != null and end_time !=''"> end_time = #{end_time}, </if>
+<if test="creator_id != null and creator_id !=''"> creator_id = #{creator_id}, </if>
+<if test="leader_user_id != null and leader_user_id !=''"> leader_user_id = #{leader_user_id}, </if>
+<if test="visibility_type != null and visibility_type !=''"> visibility_type = #{visibility_type}, </if>
+<if test="status != null and status !=''"> status = #{status}, </if>
+
+update_time = now(),
+</set>
+ WHERE id = #{id}; </update>
+<!--获取数据 不分页-->
+<select id="queryApp_team_scheduleKey" parameterType="pd" resultType="pd" useCache="false">
+SELECT <include refid="Base_Column_List"/> 
+<!--向左关联查询返回对应字段-->
+,team_id.id as team_id_id1 
+,team_id.team_name as team_id_team_name1 
+,team_id.creator_id as team_id_creator_id1 
+,team_id.admin_id as team_id_admin_id1 
+,team_id.description as team_id_description1 
+,team_id.status as team_id_status1 
+,team_id.create_time as team_id_create_time1 
+,team_id.update_time as team_id_update_time1 
+,creator_id.id as creator_id_id1 
+,COALESCE(creator_id.USERNAME,
+    CASE WHEN su.creator_id IS NULL OR TRIM(IFNULL(CAST(su.creator_id AS CHAR),'')) = '' THEN '(未设置)'
+    ELSE CONCAT('ID:', TRIM(CAST(su.creator_id AS CHAR)), '（无匹配账号）') END) as creator_id_USERNAME1 
+,creator_id.PASSWORD as creator_id_PASSWORD1 
+,creator_id.NAME as creator_id_NAME1 
+,creator_id.role_manage_id as creator_id_role_manage_id1 
+,creator_id.create_time as creator_id_create_time1 
+,creator_id.update_time as creator_id_update_time1 
+,creator_id.signature as creator_id_signature1 
+,leader_u.id as leader_user_id_id1
+,COALESCE(NULLIF(TRIM(IFNULL(leader_u.nickname,'')),''),leader_u.username,
+  CASE WHEN su.leader_user_id IS NULL OR TRIM(IFNULL(CAST(su.leader_user_id AS CHAR),'')) = '' THEN '(未设置)'
+  ELSE CONCAT('ID:', TRIM(CAST(su.leader_user_id AS CHAR)), '（无匹配账号）') END) as leader_user_name1
+,CASE CAST(IFNULL(su.visibility_type,'1') AS CHAR)
+  WHEN '2' THEN '指定成员'
+  ELSE '全体成员'
+ END as visibility_type_name1
+,(SELECT GROUP_CONCAT(
+      COALESCE(NULLIF(TRIM(IFNULL(u.nickname,'')),''),u.username,CONCAT('用户#',sm.user_id))
+      ORDER BY sm.id SEPARATOR ', '
+   )
+   FROM app_team_schedule_member sm
+   left join app_user u on CAST(u.id AS CHAR)=CAST(sm.user_id AS CHAR)
+   WHERE CAST(sm.schedule_id AS CHAR)=CAST(su.id AS CHAR)
+ ) as member_user_names1
+,(SELECT GROUP_CONCAT(CAST(sm.user_id AS CHAR) ORDER BY sm.id SEPARATOR ',')
+   FROM app_team_schedule_member sm
+   WHERE CAST(sm.schedule_id AS CHAR)=CAST(su.id AS CHAR)
+ ) as member_user_ids1
+,(SELECT COUNT(1) FROM app_schedule_task ast WHERE CAST(ast.schedule_id AS CHAR)=CAST(su.id AS CHAR)) as progress_total1
+,(SELECT SUM(CASE WHEN CAST(IFNULL(ast.status,'') AS CHAR)='2' THEN 1 ELSE 0 END) FROM app_schedule_task ast WHERE CAST(ast.schedule_id AS CHAR)=CAST(su.id AS CHAR)) as progress_done1
+,(SELECT SUM(CASE WHEN CAST(IFNULL(ast.status,'') AS CHAR) IN ('0','1') THEN 1 ELSE 0 END) FROM app_schedule_task ast WHERE CAST(ast.schedule_id AS CHAR)=CAST(su.id AS CHAR)) as progress_active1
+,(SELECT SUM(CASE WHEN CAST(IFNULL(ast.status,'') AS CHAR)='3' THEN 1 ELSE 0 END) FROM app_schedule_task ast WHERE CAST(ast.schedule_id AS CHAR)=CAST(su.id AS CHAR)) as progress_overdue1
+FROM app_team_schedule su
+<!--向左关联查询-->
+left join app_team team_id on team_id.id=su.team_id
+left join sys_user creator_id on CAST(creator_id.id AS CHAR)=TRIM(CAST(IFNULL(su.creator_id,'') AS CHAR))
+left join app_user leader_u on CAST(leader_u.id AS CHAR)=TRIM(CAST(IFNULL(su.leader_user_id,'') AS CHAR))
+where 1 = 1
+  and CAST(IFNULL(team_id.audit_status,'') AS CHAR) = '1'
+  and CAST(IFNULL(team_id.status,'') AS CHAR) = '1'
+ <if test="id != null and id != '' "> and su.id = #{id}  </if>
+ <if test="team_id != null and team_id != '' "> and su.team_id = #{team_id}  </if>
+ <if test="title != null and title != '' "> and su.title = #{title}  </if>
+ <if test="content != null and content != '' "> and su.content = #{content}  </if>
+ <if test="start_time != null and start_time != '' "> and su.start_time = #{start_time}  </if>
+ <if test="end_time != null and end_time != '' "> and su.end_time = #{end_time}  </if>
+ <if test="creator_id != null and creator_id != '' "> and su.creator_id = #{creator_id}  </if>
+ <if test="leader_user_id != null and leader_user_id != '' "> and su.leader_user_id = #{leader_user_id}  </if>
+ <if test="visibility_type != null and visibility_type != '' "> and su.visibility_type = #{visibility_type}  </if>
+ <if test="status != null and status != '' "> and su.status = #{status}  </if>
+ <if test="create_time != null and create_time != '' "> and su.create_time = #{create_time}  </if>
+ <if test="update_time != null and update_time != '' "> and su.update_time = #{update_time}  </if>
+ <if test="login_user_id != null and login_user_id != '' and (role_manage_id == null or role_manage_id == '' or role_manage_id != '1')">
+ and (
+   CAST(su.team_id AS CHAR) in (
+     SELECT CAST(t.id AS CHAR) FROM app_team t
+     WHERE CAST(t.admin_id AS CHAR)=CAST(#{login_user_id} AS CHAR) OR CAST(t.creator_id AS CHAR)=CAST(#{login_user_id} AS CHAR)
+   )
+   OR CAST(su.team_id AS CHAR) in (
+     SELECT CAST(tu.team_id AS CHAR) FROM app_team_user tu
+     WHERE CAST(tu.user_id AS CHAR)=CAST(#{login_user_id} AS CHAR) AND CAST(IFNULL(tu.status,'') AS CHAR)='1'
+   )
+ )
+ </if>
+</select>
+<!--获取用户列表数据 分页-->
+<select id="queryPageApp_team_scheduleKeyList" parameterType="page" resultType="pd" useCache="false">
+SELECT <include refid="Base_Column_List"/> 
+<!--向左关联查询返回对应字段-->
+,team_id.id as team_id_id1 
+,team_id.team_name as team_id_team_name1 
+,team_id.creator_id as team_id_creator_id1 
+,team_id.admin_id as team_id_admin_id1 
+,team_id.description as team_id_description1 
+,team_id.status as team_id_status1 
+,team_id.create_time as team_id_create_time1 
+,team_id.update_time as team_id_update_time1 
+,creator_id.id as creator_id_id1 
+,COALESCE(creator_id.USERNAME,
+    CASE WHEN su.creator_id IS NULL OR TRIM(IFNULL(CAST(su.creator_id AS CHAR),'')) = '' THEN '(未设置)'
+    ELSE CONCAT('ID:', TRIM(CAST(su.creator_id AS CHAR)), '（无匹配账号）') END) as creator_id_USERNAME1 
+,creator_id.PASSWORD as creator_id_PASSWORD1 
+,creator_id.NAME as creator_id_NAME1 
+,creator_id.role_manage_id as creator_id_role_manage_id1 
+,creator_id.create_time as creator_id_create_time1 
+,creator_id.update_time as creator_id_update_time1 
+,creator_id.signature as creator_id_signature1 
+,leader_u.id as leader_user_id_id1
+,COALESCE(NULLIF(TRIM(IFNULL(leader_u.nickname,'')),''),leader_u.username,
+  CASE WHEN su.leader_user_id IS NULL OR TRIM(IFNULL(CAST(su.leader_user_id AS CHAR),'')) = '' THEN '(未设置)'
+  ELSE CONCAT('ID:', TRIM(CAST(su.leader_user_id AS CHAR)), '（无匹配账号）') END) as leader_user_name1
+,CASE CAST(IFNULL(su.visibility_type,'1') AS CHAR)
+  WHEN '2' THEN '指定成员'
+  ELSE '全体成员'
+ END as visibility_type_name1
+,(SELECT GROUP_CONCAT(
+      COALESCE(NULLIF(TRIM(IFNULL(u.nickname,'')),''),u.username,CONCAT('用户#',sm.user_id))
+      ORDER BY sm.id SEPARATOR ', '
+   )
+   FROM app_team_schedule_member sm
+   left join app_user u on CAST(u.id AS CHAR)=CAST(sm.user_id AS CHAR)
+   WHERE CAST(sm.schedule_id AS CHAR)=CAST(su.id AS CHAR)
+ ) as member_user_names1
+,(SELECT GROUP_CONCAT(CAST(sm.user_id AS CHAR) ORDER BY sm.id SEPARATOR ',')
+   FROM app_team_schedule_member sm
+   WHERE CAST(sm.schedule_id AS CHAR)=CAST(su.id AS CHAR)
+ ) as member_user_ids1
+,(SELECT COUNT(1) FROM app_schedule_task ast WHERE CAST(ast.schedule_id AS CHAR)=CAST(su.id AS CHAR)) as progress_total1
+,(SELECT SUM(CASE WHEN CAST(IFNULL(ast.status,'') AS CHAR)='2' THEN 1 ELSE 0 END) FROM app_schedule_task ast WHERE CAST(ast.schedule_id AS CHAR)=CAST(su.id AS CHAR)) as progress_done1
+,(SELECT SUM(CASE WHEN CAST(IFNULL(ast.status,'') AS CHAR) IN ('0','1') THEN 1 ELSE 0 END) FROM app_schedule_task ast WHERE CAST(ast.schedule_id AS CHAR)=CAST(su.id AS CHAR)) as progress_active1
+,(SELECT SUM(CASE WHEN CAST(IFNULL(ast.status,'') AS CHAR)='3' THEN 1 ELSE 0 END) FROM app_schedule_task ast WHERE CAST(ast.schedule_id AS CHAR)=CAST(su.id AS CHAR)) as progress_overdue1
+FROM app_team_schedule su
+<!--向左关联查询-->
+left join app_team team_id on team_id.id=su.team_id
+left join sys_user creator_id on CAST(creator_id.id AS CHAR)=TRIM(CAST(IFNULL(su.creator_id,'') AS CHAR))
+left join app_user leader_u on CAST(leader_u.id AS CHAR)=TRIM(CAST(IFNULL(su.leader_user_id,'') AS CHAR))
+where 1 = 1
+  and CAST(IFNULL(team_id.audit_status,'') AS CHAR) = '1'
+  and CAST(IFNULL(team_id.status,'') AS CHAR) = '1'
+ <if test="pd.id != null and pd.id !=''"> and su.id = #{pd.id}  </if>
+ <if test="pd.team_id != null and pd.team_id !=''"> and su.team_id = #{pd.team_id}  </if>
+ <if test="pd.title != null and pd.title !=''"> and su.title = #{pd.title}  </if>
+ <if test="pd.content != null and pd.content !=''"> and su.content = #{pd.content}  </if>
+ <if test="pd.start_time != null and pd.start_time !=''"> and su.start_time = #{pd.start_time}  </if>
+ <if test="pd.end_time != null and pd.end_time !=''"> and su.end_time = #{pd.end_time}  </if>
+ <if test="pd.creator_id != null and pd.creator_id !=''"> and su.creator_id = #{pd.creator_id}  </if>
+ <if test="pd.leader_user_id != null and pd.leader_user_id !=''"> and su.leader_user_id = #{pd.leader_user_id}  </if>
+ <if test="pd.visibility_type != null and pd.visibility_type !=''"> and su.visibility_type = #{pd.visibility_type}  </if>
+ <if test="pd.status != null and pd.status !=''"> and su.status = #{pd.status}  </if>
+ <if test="pd.create_time != null and pd.create_time !=''"> and su.create_time = #{pd.create_time}  </if>
+ <if test="pd.update_time != null and pd.update_time !=''"> and su.update_time = #{pd.update_time}  </if>
+ <if test="pd.login_user_id != null and pd.login_user_id != '' and (pd.role_manage_id == null or pd.role_manage_id == '' or pd.role_manage_id != '1')">
+ and (
+   CAST(su.team_id AS CHAR) in (
+     SELECT CAST(t.id AS CHAR) FROM app_team t
+     WHERE CAST(t.admin_id AS CHAR)=CAST(#{pd.login_user_id} AS CHAR) OR CAST(t.creator_id AS CHAR)=CAST(#{pd.login_user_id} AS CHAR)
+   )
+   OR CAST(su.team_id AS CHAR) in (
+     SELECT CAST(tu.team_id AS CHAR) FROM app_team_user tu
+     WHERE CAST(tu.user_id AS CHAR)=CAST(#{pd.login_user_id} AS CHAR) AND CAST(IFNULL(tu.status,'') AS CHAR)='1'
+   )
+ )
+ </if>
+</select>
+</mapper>

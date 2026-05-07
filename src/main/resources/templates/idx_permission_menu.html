@@ -1,0 +1,493 @@
+﻿<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--权限管理界面-->
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0"
+          name="viewport">
+    <title>权限管理</title>
+    <link href="../static/img/favicon.jpg" rel="shortcut icon">
+    <!--css资源引用-->
+    <link href="../static/element-ui/lib/theme-chalk/index.css" rel="stylesheet">
+    <link href="../static/css/common.css" rel="stylesheet">
+    <!--js资源引用-->
+    <script type="text/javascript">
+        var html = document.getElementsByTagName("html")[0];
+        var w = document.documentElement.clientWidth || document.body.clientWidth;
+        html.style.fontSize = w / 1366 + "px";
+    </script>
+    <script src="../static/js/vue.js"></script>
+    <script src="../static/element-ui/lib/index.js"></script>
+    <script src="../static/js/jquery-2.2.3.min.js"></script>
+    <script src="../static/js/elementUI_icon.js"></script>
+    <!--验证规则-->
+    <script src="../static/js/elementui_validator.js"></script>
+    <!--富文本资源文件-->
+    <script charset="utf-8" src="../static/ueditor.config.js" type="text/javascript"></script>
+    <script charset="utf-8" src="../static/ueditor.all.min.js" type="text/javascript"></script>
+</head>
+<body>
+<div id="cus_IndexApp" v-cloak>
+    <!--顶部搜索区功能按钮-->
+    <div class="admin-page-toolbar">
+        <el-button @click="add" class="table-button-add" icon="el-icon-circle-plus-outline" size="mini" v-if="name_add">
+            新增
+        </el-button>
+        <el-select class="top_divR" clearable placeholder="请选择一级菜单" size="mini" v-model="soMoreUserIpt.menu_id">
+            <el-option
+                    :key="item.id"
+                    :label="item.name"
+                    :value="item.id"
+                    v-for="item in classOptionsmenu_id">
+            </el-option>
+        </el-select>
+        <el-select class="top_divR" clearable placeholder="请选择二级菜单" size="mini"
+                   v-model="soMoreUserIpt.child_menu_id">
+            <el-option
+                    :key="item.id"
+                    :label="item.name"
+                    :value="item.id"
+                    v-for="item in classOptionschild_menu_id">
+            </el-option>
+        </el-select>
+        <el-select class="top_divR" clearable placeholder="请选择所属账号" size="mini"
+                   v-model="soMoreUserIpt.sys_user_id">
+            <el-option
+                    :key="item.id"
+                    :label="item.USERNAME"
+                    :value="item.id"
+                    v-for="item in classOptionssys_user_id">
+            </el-option>
+        </el-select>
+        <el-select class="top_divR" clearable placeholder="请选择角色" size="mini"
+                   v-model="soMoreUserIpt.role_manage_id">
+            <el-option
+                    :key="item.id"
+                    :label="item.role_name"
+                    :value="item.id"
+                    v-for="item in classOptionsrole_manage_id">
+            </el-option>
+        </el-select>
+        <el-button @click="handleCurrentChange(1)" class="table-button-search" icon="el-icon-search" size="mini"
+                   v-if="name_query">搜索
+        </el-button>
+    </div>
+    <!--列表数据展示区-->
+    <div class="cusMTable">
+        <el-table :data="cusTableLstInit" header-row-class-name="header-row-class-name" stripe style="width: 100%;">
+            <el-table-column
+                    label="主键id"
+                    prop="id">
+            </el-table-column>
+            <el-table-column
+                    label="一级菜单"
+                    prop="menu_id">
+                <template slot-scope="scope">
+                    <el-tag type="success">{{scope.row.menu_id_name1}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    label="二级菜单"
+                    prop="child_menu_id">
+                <template slot-scope="scope">
+                    <el-tag type="success">{{scope.row.child_menu_id_name1}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    label="新增权限"
+                    prop="name_add">
+                <template slot-scope="scope">
+                    <el-tag type="success" v-if="scope.row.name_add=='1'">是</el-tag>
+                    <el-tag type="info" v-else>否</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    label="修改权限"
+                    prop="name_edit">
+                <template slot-scope="scope">
+                    <el-tag type="success" v-if="scope.row.name_edit=='1'">是</el-tag>
+                    <el-tag type="info" v-else>否</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    label="删除权限"
+                    prop="name_delete">
+                <template slot-scope="scope">
+                    <el-tag type="success" v-if="scope.row.name_delete=='1'">是</el-tag>
+                    <el-tag type="info" v-else>否</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    label="查询权限"
+                    prop="name_query">
+                <template slot-scope="scope">
+                    <el-tag type="success" v-if="scope.row.name_query=='1'">是</el-tag>
+                    <el-tag type="info" v-else>否</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    label="所属账号"
+                    prop="sys_user_id">
+                <template slot-scope="scope">
+                    <el-tag type="success">{{scope.row.sys_user_id_USERNAME1}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    label="角色"
+                    prop="role_manage_id">
+                <template slot-scope="scope">
+                    <el-tag type="success">{{scope.row.role_manage_id_role_name1}}</el-tag>
+                </template>
+            </el-table-column>
+            <el-table-column
+                    label="创建时间"
+                    prop="create_time">
+            </el-table-column>
+            <el-table-column fixed="right" label="操作" min-width="190" width="230">
+                <template slot-scope="scope">
+                    <div class="operation-buttons">
+                        <el-button @click="view(scope.row)" class="table-button-view operation-btn" icon="el-icon-view" size="mini">
+                            查看
+                        </el-button>
+                        <el-button @click="edit(scope.row)" class="table-button-edit operation-btn" icon="el-icon-edit" size="mini"
+                                   v-if="name_edit">编辑
+                        </el-button>
+                        <el-button @click="del(scope.row)" class="table-button-delete operation-btn" icon="el-icon-delete" size="mini"
+                                   v-if="name_delete">删除
+                        </el-button>
+                    </div>
+                </template>
+            </el-table-column>
+        </el-table>
+        <div style="text-align:right;">
+            <el-pagination :current-page="pageInit.currentPage" :page-size="10" :total="pageInit.totalResult"
+                           @current-change="handleCurrentChange" layout="total, prev, pager, next, jumper">
+            </el-pagination>
+        </div>
+    </div>
+    <!--新增、编辑、详情dialog界面-->
+    <el-dialog :title="titleName" :visible.sync="addNewCustomer" top="5vh" width="60%">
+        <el-form :disabled="viewDisabled" :model="ruleForm" :rules="rules" class="demo-ruleForm" label-width="100px"
+                 ref="ruleForm">
+            <el-form-item label="一级菜单" prop="menu_id">
+                <!--单选按钮-->
+                <div>
+                    <el-radio-group v-model="ruleForm.menu_id">
+                        <el-radio-button :key="item.id" :label="item.id" v-for="item in classOptionsmenu_id">
+                            {{item.name}}
+                        </el-radio-button>
+                    </el-radio-group>
+                </div>
+            </el-form-item>
+            </el-form-item>
+            <el-form-item label="二级菜单" prop="child_menu_id">
+                <!--下拉框-->
+                <div>
+                    <el-select placeholder="请选择二级菜单" v-model="ruleForm.child_menu_id">
+                        <el-option :key="item.id" :label="item.name" :value="item.id"
+                                   v-for="item in classOptionschild_menu_id"></el-option>
+                    </el-select>
+                </div>
+            </el-form-item>
+            <el-form-item label="新增权限" prop="name_add">
+                <el-switch active-color="#67C23A" active-text="启用" active-value="1" inactive-text="禁用"
+                           inactive-value="0" v-model="ruleForm.name_add"></el-switch>
+            </el-form-item>
+            <el-form-item label="修改权限" prop="name_edit">
+                <el-switch active-color="#67C23A" active-text="启用" active-value="1" inactive-text="禁用"
+                           inactive-value="0" v-model="ruleForm.name_edit"></el-switch>
+            </el-form-item>
+            <el-form-item label="删除权限" prop="name_delete">
+                <el-switch active-color="#67C23A" active-text="启用" active-value="1" inactive-text="禁用"
+                           inactive-value="0" v-model="ruleForm.name_delete"></el-switch>
+            </el-form-item>
+            <el-form-item label="查询权限" prop="name_query">
+                <el-switch active-color="#67C23A" active-text="启用" active-value="1" inactive-text="禁用"
+                           inactive-value="0" v-model="ruleForm.name_query"></el-switch>
+            </el-form-item>
+            <el-form-item label="所属账号" prop="sys_user_id">
+                <!--下拉框-->
+                <div>
+                    <el-select placeholder="请选择所属账号" v-model="ruleForm.sys_user_id">
+                        <el-option :key="item.id" :label="item.USERNAME" :value="item.id"
+                                   v-for="item in classOptionssys_user_id"></el-option>
+                    </el-select>
+                </div>
+            </el-form-item>
+            <el-form-item label="角色" prop="role_manage_id">
+                <!--单选按钮-->
+                <div>
+                    <el-radio-group v-model="ruleForm.role_manage_id">
+                        <el-radio-button :key="item.id" :label="item.id" v-for="item in classOptionsrole_manage_id">
+                            {{item.role_name}}
+                        </el-radio-button>
+                    </el-radio-group>
+                </div>
+            </el-form-item>
+            </el-form-item>
+            <el-form-item v-if="!viewDisabled">
+                <el-button @click="submitForm" style="margin-left:35%" type="primary">立即保存</el-button>
+            </el-form-item>
+        </el-form>
+    </el-dialog>
+</div>
+</body>
+<script th:inline="javascript">
+    var test_detailsue = null;
+    var test_detailsue;
+    var ue = null;
+    var basePath = "/" + window.location.pathname.split("/")[1];
+    let app = window.parent.App;
+    <!--使用vue-->
+    new Vue({
+        el: "#cus_IndexApp",
+        <!--初始化 data -->
+        data() {
+            return {
+                pageInit: {
+                    currentPage: 1,
+                },
+                cusTableLstInit: [],
+                soMoreUserIpt: {},
+                addNewCustomer: false,
+                ruleForm: {},
+                rules: {
+                    id: [
+                        {required: false, message: '请填写主键id', trigger: 'blur'}
+                    ],
+                    menu_id: [
+                        {required: false, message: '请填写一级菜单', trigger: 'change'}
+                    ],
+                    child_menu_id: [
+                        {required: false, message: '请填写二级菜单', trigger: 'change'}
+                    ],
+                    name_add: [
+                        {required: false, message: '请填写新增权限', trigger: 'change'}
+                    ],
+                    name_edit: [
+                        {required: false, message: '请填写修改权限', trigger: 'change'}
+                    ],
+                    name_delete: [
+                        {required: false, message: '请填写删除权限', trigger: 'change'}
+                    ],
+                    name_query: [
+                        {required: false, message: '请填写查询权限', trigger: 'change'}
+                    ],
+                    sys_user_id: [
+                        {required: false, message: '请填写所属账号', trigger: 'change'}
+                    ],
+                    role_manage_id: [
+                        {required: false, message: '请填写角色', trigger: 'change'}
+                    ],
+                    create_time: [
+                        {required: false, message: '请填写创建时间', trigger: 'blur'}
+                    ],
+                },
+                viewDisabled: false,
+                titleName: "新增",
+                classOptionsmenu_id: [],
+                classOptionschild_menu_id: [],
+                classOptionssys_user_id: [],
+                classOptionsrole_manage_id: [],
+                classOptions: [],
+                userObj: [],
+                name_add: false,//新增权限
+                name_edit: false,//编辑权限
+                name_delete: false,//删除权限
+                name_query: false,//查询权限
+                tenantList: [],
+                uploadUrl: basePath,
+                iconList: iconList,
+            }
+        },
+        <!--初始化 mounted -->
+        mounted() {
+            this.userObj = JSON.parse(localStorage.getItem("userInfo"));
+            this.getUserBtnList(this.userObj.role_manage_id);//调用获取权限按钮
+            this.handleCurrentChange(1);
+            this.getClassOptionsmenu_id();
+            this.getClassOptionschild_menu_id();
+            this.getClassOptionssys_user_id();
+            this.getClassOptionsrole_manage_id();
+        },
+        <!--初始化 methods -->
+        methods: {
+//获取权限按钮方法
+            getUserBtnList(role_manage_id) {
+                var pram = new URLSearchParams('?' + window.location.href.split('?')[1]);
+                var child_menu_id = pram.get('child_menu_id');
+                let that = this;
+//ajax发送请求
+                $.ajax({
+                    type: "GET",
+                    url: basePath + "/permission_menu/queryPermission_menuKey",
+                    data: {role_manage_id: role_manage_id, child_menu_id: child_menu_id},
+                    success: function (res) {
+                        let childMenu = res.data[0];
+                        that.name_add = childMenu.name_add == '1'//新增权限
+                        that.name_edit = childMenu.name_edit == '1'//编辑权限
+                        that.name_delete = childMenu.name_delete == '1'//删除权限
+                        that.name_query = childMenu.name_query == '1'//查询权限
+                    }
+                })
+            },
+            windowOpen(url) {
+                window.open(url);
+            },
+            view(row) {
+                this.titleName = "详情";
+                this.ruleForm = row;
+                this.viewDisabled = true;
+                this.addNewCustomer = true;
+                this.ruleForm.menu_id = Number(row.menu_id);
+                this.ruleForm.child_menu_id = Number(row.child_menu_id);
+                this.ruleForm.sys_user_id = Number(row.sys_user_id);
+                this.ruleForm.role_manage_id = Number(row.role_manage_id);
+            },
+            add() {
+                this.titleName = "新增";
+                this.addNewCustomer = true;
+                this.viewDisabled = false;
+            },
+            edit(row) {
+                this.titleName = "编辑";
+                this.ruleForm = row;
+                this.addNewCustomer = true;
+                this.viewDisabled = false;
+                this.ruleForm.menu_id = Number(row.menu_id);
+                this.ruleForm.child_menu_id = Number(row.child_menu_id);
+                this.ruleForm.sys_user_id = Number(row.sys_user_id);
+                this.ruleForm.role_manage_id = Number(row.role_manage_id);
+            },
+            getClassOptionsmenu_id() {
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/menu/queryMenuKey`,
+                    data: {},
+                    success: function (data) {
+                        that.classOptionsmenu_id = data.data;
+                    }
+                })
+            },
+            getClassOptionschild_menu_id() {
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/child_menu/queryChild_menuKey`,
+                    data: {},
+                    success: function (data) {
+                        that.classOptionschild_menu_id = data.data;
+                    }
+                })
+            },
+            getClassOptionssys_user_id() {
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/sys_user/querySys_userKey`,
+                    data: {},
+                    success: function (data) {
+                        that.classOptionssys_user_id = data.data;
+                    }
+                })
+            },
+            getClassOptionsrole_manage_id() {
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/role_manage/queryRole_manageKey`,
+                    data: {},
+                    success: function (data) {
+                        that.classOptionsrole_manage_id = data.data;
+                    }
+                })
+            },
+            submitForm() {
+                let that = this;
+                this.$refs.ruleForm.validate((valid) => {
+                    if (valid) {
+                        if (this.titleName == "新增") {
+                            $.ajax({
+                                type: "POST",
+                                url: basePath + "/permission_menu/addPermission_menuNo",
+                                data: that.ruleForm,
+                                success: function (res) {
+                                    console.log(res);
+                                    if (res.status == 0) {
+                                        that.addNewCustomer = false;
+                                        that.handleCurrentChange(1);
+                                    }
+                                }
+                            })
+                        } else if (this.titleName == "编辑") {
+                            $.ajax({
+                                type: "POST",
+                                url: basePath + "/permission_menu/updatePermission_menu",
+                                data: that.ruleForm,
+                                success: function (res) {
+                                    if (res.status == 0) {
+                                        that.addNewCustomer = false;
+                                        that.handleCurrentChange(1);
+                                    }
+                                }
+                            })
+                        }
+                    } else {
+                        console.log('error submit!!');
+                        return false;
+                    }
+                });
+            },
+            changeSearchFlag() {
+                this.topSearchFlag = false;
+            },
+            handleCurrentChange(val) {
+                this.loading = true;
+                this.soMoreUserIpt.currentPage = val;
+                let that = this;
+                $.ajax({
+                    type: "GET",
+                    url: `${basePath}/permission_menu/queryPagePermission_menuKeyList`,
+                    data: that.soMoreUserIpt,
+                    success: function (data) {
+                        that.cusTableLstInit = data.rows;
+                        that.pageInit.totalResult = data.total;
+                        that.pageInit.currentPage = val;
+                        that.loading = false;
+                    }
+                })
+            },
+            del(row) {
+                var that = this;
+                that.$confirm("确认删除该信息!", "提示", {
+                    confirmButtonText: "确定",
+                    cancelButtonText: "取消",
+                    type: "warning"
+                }).then(() => {
+                    $.ajax({
+                        type: "GET",
+                        url: `${basePath}/permission_menu/deletePermission_menu`,
+                        data: {id: row.id},
+                        success: function (data) {
+                            if (data.status == 0) {
+                                that.$message({
+                                    type: "success",
+                                    message: "删除成功"
+                                });
+                                that.handleCurrentChange(1);
+                            }
+                        }
+                    })
+                }).catch(() => {
+                    this.$message({
+                        type: "info",
+                        message: "已取消删除"
+                    });
+                });
+            },
+        }
+    })
+</script>
+</html>
+
