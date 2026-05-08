@@ -22,8 +22,15 @@ import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+
 import javax.servlet.http.HttpSession;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 //@ApiIgnore
@@ -243,6 +250,8 @@ public class LoginController extends BaseController {
             map.put("result", "你已经登录过无需再次登录!");
         } else {
             session.setAttribute(AllConfig.SESSION_KEY, user);
+            // 同步设置 Spring Security 认证上下文
+            setSpringSecurityAuth(user);
             map.put("msg", "200");
             map.put("result", "登录成功!");
             map.put("data", user);
@@ -284,6 +293,30 @@ public class LoginController extends BaseController {
     /**
      * 上传
      */
+    /** 将 session 用户同步到 Spring Security 上下文 */
+    private void setSpringSecurityAuth(PageData user) {
+        String username = user.getString("USERNAME");
+        if (Tools.isEmpty(username)) {
+            username = user.getString("username");
+        }
+        if (Tools.isEmpty(username)) {
+            return;
+        }
+        // 根据角色分配权限
+        List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+        String roleId = String.valueOf(user.get("role_manage_id"));
+        if ("1".equals(roleId)) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        } else if ("2".equals(roleId)) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_TEAM_ADMIN"));
+        } else {
+            authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+        }
+        Authentication auth = new UsernamePasswordAuthenticationToken(
+                username, null, authorities);
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
     @PostMapping("/upload")
     @ResponseBody
     @ApiOperation(value = "上传")
