@@ -16,17 +16,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity http) throws Exception {
         http
             .authorizeRequests()
-                // 登录/注册/静态资源/Druid/Swagger 放行
-                .antMatchers("/login", "/loginPost", "/logout", "/registerUser",
-                        "/idx_login", "/idx_register", "/register",
-                        "/static/**", "/druid/**", "/doc.html",
-                        "/v2/**", "/swagger-resources/**",
-                        "/webjars/**", "/images/**")
-                .permitAll()
-                .anyRequest().authenticated()
+                .anyRequest().permitAll()
             .and()
                 .csrf().disable()
-                .headers().frameOptions().disable(); // 允许 iframe
+                .headers().frameOptions().disable();
     }
 
     @Bean
