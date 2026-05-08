@@ -19,8 +19,7 @@ import org.apache.ibatis.scripting.xmltags.ForEachSqlNode;
 import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.type.TypeHandler;
 import org.apache.ibatis.type.TypeHandlerRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.xml.bind.PropertyException;
 import java.lang.reflect.Field;
@@ -36,11 +35,11 @@ import java.util.Properties;
  * 
  */
 @Intercepts({@Signature(type=StatementHandler.class,method="prepare",args={Connection.class,Integer.class})})
+@Slf4j
 public class MyBatisInterceptor implements Interceptor {
 
 	private static String dialect = "mysql";	//数据库方言
 	private static String pageSqlId = ".*queryPage.*"; //mapper.xml中需要拦截的ID(正则匹配)
-	private static final Logger log = LoggerFactory.getLogger(MyBatisInterceptor.class);
 	
 	
 	public Object intercept(Invocation ivk) throws Throwable {

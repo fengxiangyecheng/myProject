@@ -7,9 +7,8 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
+import lombok.extern.slf4j.Slf4j;
 import net.sf.json.JSONObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,11 +18,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import java.util.Collections;
 import java.util.List;
 import  com.testdemo.service.App_userService;
+@Slf4j
 @Api(value = "app_user", description = "用户管理", tags = "用户管理")
 @Controller
 @RequestMapping("/app_user")
 public class App_userController extends BaseController {
-private static final Logger log=LoggerFactory.getLogger(App_userController.class);
 @Autowired
 private App_userService _service;
 /** 获取用户管理页面 */

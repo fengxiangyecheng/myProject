@@ -13,8 +13,7 @@ import com.testdemo.util.UploadUtil;
 import net.sf.json.JSONNull;
 import net.sf.json.JSONObject;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -25,6 +24,7 @@ import com.testdemo.entity.system.PageData;
 import com.testdemo.util.Tools;
 import org.springframework.web.multipart.MultipartFile;
 
+@Slf4j
 @Controller
 public class BaseController {
 
@@ -41,9 +41,6 @@ public class BaseController {
 
 	// 404 not found 页面跳转
 	protected final String NOT_FOUND = "/404";
-
-	private static final Logger log = LoggerFactory
-			.getLogger(BaseController.class);
 
 	/**
 	 * 通用返回json分页数据

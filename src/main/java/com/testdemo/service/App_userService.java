@@ -5,16 +5,15 @@ import com.testdemo.entity.system.PageData;
 import com.testdemo.mapper.App_userMapper;
 import com.testdemo.service.BaseService;
 import com.testdemo.util.Tools;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import java.util.List;
+@Slf4j
 @Service
 public class App_userService extends BaseService {
-private static final Logger log=LoggerFactory.getLogger(App_userService.class);
 @Autowired
 private App_userMapper _mapper;
 

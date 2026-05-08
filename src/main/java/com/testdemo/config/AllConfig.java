@@ -5,8 +5,7 @@ import com.testdemo.mybatis.MyBatisInterceptor;
 import org.apache.ibatis.plugin.Interceptor;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionFactoryBean;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
@@ -31,13 +30,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
+@Slf4j
 @Configuration
 @EnableTransactionManagement
 public class AllConfig extends WebMvcConfigurerAdapter {
 
 	@Autowired
 	private Environment env;
-	private static final Logger log = LoggerFactory.getLogger(AllConfig.class);
+
 	/**
 	 * web登录验证相关配置
 	 */
@@ -76,6 +76,19 @@ public class AllConfig extends WebMvcConfigurerAdapter {
 		props.put("url", env.getProperty("jdbc.url"));
 		props.put("username", env.getProperty("jdbc.username"));
 		props.put("password", env.getProperty("jdbc.password"));
+		props.put("filters", "stat,wall");
+		props.put("maxActive", "20");
+		props.put("initialSize", "1");
+		props.put("maxWait", "60000");
+		props.put("minIdle", "1");
+		props.put("timeBetweenEvictionRunsMillis", "60000");
+		props.put("minEvictableIdleTimeMillis", "300000");
+		props.put("validationQuery", "SELECT 'x'");
+		props.put("testWhileIdle", "true");
+		props.put("testOnBorrow", "false");
+		props.put("testOnReturn", "false");
+		props.put("poolPreparedStatements", "true");
+		props.put("maxPoolPreparedStatementPerConnectionSize", "20");
 		return DruidDataSourceFactory.createDataSource(props);
 	}
 

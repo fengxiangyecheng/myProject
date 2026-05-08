@@ -28,6 +28,13 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter</artifactId>
 		</dependency>
+		<!-- Lombok 简化代码 -->
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>1.18.30</version>
+			<scope>provided</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
@@ -56,18 +63,14 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
-			<exclusions>
-				<exclusion>
-					<groupId>org.springframework.boot</groupId>
-					<artifactId>spring-boot-starter-logging</artifactId>
-				</exclusion>
-				<!-- tomcat 外部部署环境
-                 <exclusion>
+			<!-- tomcat 外部部署环境
+            <exclusions>
+               <exclusion>
                  <groupId>org.springframework.boot</groupId>
                  <artifactId>spring-boot-starter-tomcat</artifactId>
                </exclusion>
-               -->
-			</exclusions>
+            </exclusions>
+            -->
 		</dependency>
 
 		<dependency>
@@ -130,11 +133,17 @@
 			<artifactId>pagehelper</artifactId>
 			<version>4.2.1</version>
 		</dependency>
-		<!-- 阿里巴巴数据库连接池 -->
+		<!-- 阿里巴巴数据库连接池 + 监控 -->
 		<dependency>
 			<groupId>com.alibaba</groupId>
 			<artifactId>druid</artifactId>
-			<version>1.0.11</version>
+			<version>1.1.10</version>
+			<exclusions>
+				<exclusion>
+					<groupId>log4j</groupId>
+					<artifactId>log4j</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<!-- mapper -->
 		<dependency>
@@ -169,10 +178,10 @@
             <artifactId>springfox-swagger2</artifactId>
             <version>2.7.0</version>
         </dependency>
-        <dependency><!--添加Swagger-UI依赖 -->
-			<groupId>io.springfox</groupId>
-            <artifactId>springfox-swagger-ui</artifactId>
-            <version>2.7.0</version>
+        <dependency><!-- Knife4j 增强API文档UI -->
+			<groupId>com.github.xiaoymin</groupId>
+            <artifactId>swagger-bootstrap-ui</artifactId>
+            <version>1.9.6</version>
         </dependency>
 
 		<!-- 文件上传和操作文件的时候需要使用的包 -->
