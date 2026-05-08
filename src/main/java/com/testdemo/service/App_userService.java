@@ -1,6 +1,5 @@
 package com.testdemo.service;
 import com.testdemo.common.ServerResponse;
-import com.testdemo.config.SecurityConfig.MigrationPasswordEncoder;
 import com.testdemo.entity.system.Page;
 import com.testdemo.entity.system.PageData;
 import com.testdemo.mapper.App_userMapper;
@@ -28,7 +27,7 @@ String m=t.getMessage();
 if(m==null||m.isEmpty()){m=e.getClass().getSimpleName();}
 return m.length()>240?m.substring(0,240)+"\u2026":m;}
 
-/** 个人用户登录：与登录页 query 参数 USERNAME、PASSWORD 对齐（兼容误传 username/password） */
+/** 个人用户登录：先走原始 SQL 比对（明文），失败则尝试 BCrypt */
 public PageData getLoginValidation(PageData pd) {
 String u=trimLogin(pd.getString("USERNAME"),pd.getString("username"));
 String p=trimLogin(pd.getString("PASSWORD"),pd.getString("password"));
@@ -36,17 +35,15 @@ if(Tools.isEmpty(u)||Tools.isEmpty(p)){return null;}
 PageData q=new PageData();
 q.put("USERNAME",u);
 q.put("PASSWORD",p);
-PageData user=_mapper.queryByUsername(q);
-if(user==null){return null;}
-String storedPwd=user.getString("password");
+// 1. 先用原始 SQL 比对，兼容全部旧数据
+PageData user=_mapper.getLoginValidation(q);
+if(user!=null){return user;}
+// 2. 明文比对失败，尝试 BCrypt（密码已加密的情况）
+PageData userByName=_mapper.queryByUsername(q);
+if(userByName==null){return null;}
+String storedPwd=userByName.getString("password");
 if(!passwordEncoder.matches(p,storedPwd)){return null;}
-if(passwordEncoder instanceof MigrationPasswordEncoder
-&&((MigrationPasswordEncoder)passwordEncoder).needsMigration(storedPwd)){
-PageData upd=new PageData();
-upd.put("USERNAME",u);
-upd.put("PASSWORD",passwordEncoder.encode(p));
-_mapper.updatePassword(upd);}
-return user;}
+return userByName;}
 
 private static String trimLogin(String a,String b){
 String s=!Tools.isEmpty(a)?a:b;

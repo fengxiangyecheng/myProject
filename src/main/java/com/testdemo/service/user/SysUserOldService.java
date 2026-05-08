@@ -1,7 +1,6 @@
 package com.testdemo.service.user;
 
 import com.testdemo.common.ServerResponse;
-import com.testdemo.config.SecurityConfig.MigrationPasswordEncoder;
 import com.testdemo.entity.system.PageData;
 import com.testdemo.mapper.user.SysUserOldMapper;
 import com.testdemo.util.Tools;
@@ -20,33 +19,29 @@ public class SysUserOldService {
     }
 
     /**
-     * 登录验证：BCrypt 优先，明文密码兼容 + 自动升级
+     * 登录验证：先走原始 SQL 比对（兼容明文），失败则尝试 BCrypt
      */
     public PageData getLoginValidation(PageData pd) {
+        // 1. 先用原始方式（SQL 中比对用户名+明文密码），兼容全部旧数据
+        PageData user = sysuserOldMapper.getLoginValidation(pd);
+        if (user != null) {
+            return user;
+        }
+        // 2. 明文比对失败，尝试 BCrypt（密码已加密的情况）
         String username = pd.getString("USERNAME");
         String rawPassword = pd.getString("PASSWORD");
         if (Tools.isEmpty(username) || Tools.isEmpty(rawPassword)) {
             return null;
         }
-        // 查询用户（仅按用户名，不在 SQL 中比对密码）
         PageData query = new PageData();
         query.put("USERNAME", username);
-        PageData user = sysuserOldMapper.queryByUsername(query);
+        user = sysuserOldMapper.getSystemUserByColumn(query);
         if (user == null) {
             return null;
         }
         String storedPwd = user.getString("PASSWORD");
-        // BCrypt 校验（兼容明文）
         if (!passwordEncoder.matches(rawPassword, storedPwd)) {
             return null;
-        }
-        // 明文密码自动升级为 BCrypt
-        if (passwordEncoder instanceof MigrationPasswordEncoder
-                && ((MigrationPasswordEncoder) passwordEncoder).needsMigration(storedPwd)) {
-            PageData upd = new PageData();
-            upd.put("USERNAME", username);
-            upd.put("PASSWORD", passwordEncoder.encode(rawPassword));
-            sysuserOldMapper.updatePassword(upd);
         }
         return user;
     }
