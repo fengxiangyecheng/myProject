@@ -6,6 +6,7 @@ import com.testdemo.mapper.Sys_userMapper;
 import com.testdemo.service.BaseService;
 import com.testdemo.util.Tools;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -14,6 +15,8 @@ import java.util.ArrayList;
 public class Sys_userService extends BaseService {
 @Autowired
 private Sys_userMapper _mapper;
+@Autowired
+private PasswordEncoder passwordEncoder;
 
 /** 「个人」角色仅用于前台 app_user；后台 sys_user 勿绑定，否则与权限/任务里的用户 id 体系混淆 */
 private ServerResponse<String> rejectSysUserPersonalRole(PageData pd) {
@@ -94,7 +97,7 @@ if(Tools.isEmpty(pd.getString("id"))||Tools.isEmpty(pd.getString("PASSWORD"))){
 return ServerResponse.createByErrorMessage("参数错误");}
 PageData up=new PageData();
 up.put("id",pd.getString("id"));
-up.put("PASSWORD",pd.getString("PASSWORD"));
+up.put("PASSWORD",passwordEncoder.encode(pd.getString("PASSWORD")));
 int rowCount=_mapper.updateSys_user(up);
 return rowCount>0?ServerResponse.createBySuccessMessage("密码已重置"):ServerResponse.createByErrorMessage("重置失败");}
 /** 获取管理员管理数据(非分页,搜索功能) */

@@ -13,4 +13,10 @@ public interface SysUserOldMapper {
 
     PageData getSystemUserByColumn(PageData pd);
 
+    /** 仅按用户名查询（不含密码匹配，用于 BCrypt 校验） */
+    PageData queryByUsername(PageData pd);
+
+    /** 更新密码字段 */
+    int updatePassword(PageData pd);
+
 }

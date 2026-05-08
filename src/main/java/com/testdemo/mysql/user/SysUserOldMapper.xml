@@ -35,6 +35,21 @@
         </if>
     </select>
 
+    <!-- 仅按用户名查询（不含密码匹配，供 BCrypt 校验后比对） -->
+    <select id="queryByUsername" parameterType="pd" resultType="pd">
+        select *
+        from sys_user
+        where USERNAME = #{USERNAME}
+        limit 1
+    </select>
+
+    <!-- 更新密码字段 -->
+    <update id="updatePassword" parameterType="pd">
+        update sys_user
+        set PASSWORD = #{PASSWORD}
+        where USERNAME = #{USERNAME}
+    </update>
+
     <insert id="addSystemUser" parameterType="pd">
         insert into sys_user (
         USERNAME,

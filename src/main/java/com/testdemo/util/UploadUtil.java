@@ -11,9 +11,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.testdemo.init.Config;
 
-@Component
 @Slf4j
-	
+@Component
+public class UploadUtil {
+
 	/**
 	 * 默认上传类型, 接收所有类型的文件
 	 */

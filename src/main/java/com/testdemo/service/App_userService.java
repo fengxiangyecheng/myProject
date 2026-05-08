@@ -1,5 +1,6 @@
 package com.testdemo.service;
 import com.testdemo.common.ServerResponse;
+import com.testdemo.config.SecurityConfig.MigrationPasswordEncoder;
 import com.testdemo.entity.system.Page;
 import com.testdemo.entity.system.PageData;
 import com.testdemo.mapper.App_userMapper;
@@ -7,6 +8,7 @@ import com.testdemo.service.BaseService;
 import com.testdemo.util.Tools;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
@@ -16,6 +18,8 @@ import java.util.List;
 public class App_userService extends BaseService {
 @Autowired
 private App_userMapper _mapper;
+@Autowired
+private PasswordEncoder passwordEncoder;
 
 private static String shortUserMessage(Throwable e){
 Throwable t=e;
@@ -32,7 +36,17 @@ if(Tools.isEmpty(u)||Tools.isEmpty(p)){return null;}
 PageData q=new PageData();
 q.put("USERNAME",u);
 q.put("PASSWORD",p);
-return _mapper.getLoginValidation(q);}
+PageData user=_mapper.queryByUsername(q);
+if(user==null){return null;}
+String storedPwd=user.getString("password");
+if(!passwordEncoder.matches(p,storedPwd)){return null;}
+if(passwordEncoder instanceof MigrationPasswordEncoder
+&&((MigrationPasswordEncoder)passwordEncoder).needsMigration(storedPwd)){
+PageData upd=new PageData();
+upd.put("USERNAME",u);
+upd.put("PASSWORD",passwordEncoder.encode(p));
+_mapper.updatePassword(upd);}
+return user;}
 
 private static String trimLogin(String a,String b){
 String s=!Tools.isEmpty(a)?a:b;
@@ -77,7 +91,7 @@ if(Tools.isEmpty(pd.getString("id"))||Tools.isEmpty(pd.getString("PASSWORD"))){
 return ServerResponse.createByErrorMessage("参数错误");}
 PageData up=new PageData();
 up.put("id",pd.getString("id"));
-up.put("password",pd.getString("PASSWORD"));
+up.put("password",passwordEncoder.encode(pd.getString("PASSWORD")));
 int rowCount=_mapper.updateApp_user(up);
 return rowCount>0?ServerResponse.createBySuccessMessage("密码已重置"):ServerResponse.createByErrorMessage("重置失败");}
 
@@ -203,7 +217,7 @@ PageData sx=new PageData();
 sx.put("sex",body.get("sex"));
 normalizeSexForDb(sx);
 if(sx.get("sex")!=null){up.put("sex",sx.get("sex"));}}
-if(!Tools.isEmpty(body.getString("password"))){up.put("password",body.getString("password"));}
+if(!Tools.isEmpty(body.getString("password"))){up.put("password",passwordEncoder.encode(body.getString("password")));}
 if(body.get("user_prefs")!=null){
 String raw=String.valueOf(body.get("user_prefs")).trim();
 up.put("user_prefs",raw.isEmpty()?null:raw);}

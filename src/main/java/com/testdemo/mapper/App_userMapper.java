@@ -7,6 +7,8 @@ import java.util.List;
 public interface App_userMapper {
 /** 个人用户登录校验（用户名+密码） */
 PageData getLoginValidation(PageData pd);
+	PageData queryByUsername(PageData pd);
+	int updatePassword(PageData pd);
 /** 添加数据 */
 int addApp_user(PageData pd);
 /** 根据id删除数据 */
